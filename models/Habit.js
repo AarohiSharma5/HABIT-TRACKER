@@ -120,6 +120,83 @@ habitSchema.methods.resetStreak = function() {
     return this.save();
 };
 
+/**
+ * Un-complete habit for today
+ * Removes today's completion and recomputes streak/lastCompleted
+ */
+habitSchema.methods.uncompleteToday = async function () {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find any completion entry for today
+    const idx = this.completionHistory.findIndex(entry => {
+        const d = new Date(entry.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+    });
+
+    if (idx === -1) {
+        throw new Error('Habit not completed today');
+    }
+
+    // Remove today's completion entry
+    this.completionHistory.splice(idx, 1);
+
+    // Recompute lastCompleted and streak based on history
+    this._recomputeFromHistory();
+
+    return this.save();
+};
+
+/**
+ * Recompute `lastCompleted` and `streak` from `completionHistory`.
+ * Assumes at most one entry per day.
+ */
+habitSchema.methods._recomputeFromHistory = function () {
+    if (!this.completionHistory || this.completionHistory.length === 0) {
+        this.lastCompleted = null;
+        this.streak = 0;
+        return;
+    }
+
+    // Sort by date ascending
+    const history = [...this.completionHistory]
+        .filter(h => h.completed)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (history.length === 0) {
+        this.lastCompleted = null;
+        this.streak = 0;
+        return;
+    }
+
+    // Set lastCompleted to the last entry's date
+    const last = new Date(history[history.length - 1].date);
+    last.setHours(0, 0, 0, 0);
+    this.lastCompleted = last;
+
+    // Count consecutive days ending at lastCompleted
+    let streak = 1;
+    let cursor = new Date(last);
+    // iterate from the end backwards
+    for (let i = history.length - 2; i >= 0; i--) {
+        const d = new Date(history[i].date);
+        d.setHours(0, 0, 0, 0);
+        const prev = new Date(cursor);
+        prev.setDate(prev.getDate() - 1);
+        if (d.getTime() === prev.getTime()) {
+            streak += 1;
+            cursor = d;
+        } else if (d.getTime() === cursor.getTime()) {
+            // ignore duplicates for the same day just in case
+            continue;
+        } else {
+            break;
+        }
+    }
+    this.streak = streak;
+};
+
 // ========== Static Methods ==========
 
 /**

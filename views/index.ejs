@@ -21,8 +21,13 @@
                 <input 
                     type="text" 
                     id="habit-input" 
-                    placeholder="Enter a new habit..."
+                    placeholder="Habit name (e.g., Drink water)"
                     required
+                >
+                <input 
+                    type="text" 
+                    id="habit-description" 
+                    placeholder="Optional description"
                 >
                 <button type="submit">Add Habit</button>
             </form>
@@ -31,7 +36,7 @@
         <!-- Display area for habit list -->
         <section class="habits-section">
             <h2>My Habits</h2>
-            <div id="habits-container">
+            <div id="habits-container" class="habit-list">
                 <!-- Habits will be dynamically added here by JavaScript -->
                 <p style="text-align: center; color: #999;">Loading habits...</p>
             </div>

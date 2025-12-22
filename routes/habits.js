@@ -166,6 +166,52 @@ router.post('/:id/complete', async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/habits/:id/today
+ * Mark a habit as completed or incomplete for today
+ * Body: { completed: boolean }
+ */
+router.put('/:id/today', async (req, res) => {
+    try {
+        const { completed } = req.body;
+        if (typeof completed !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'Field "completed" must be boolean' });
+        }
+
+        const habit = await Habit.findById(req.params.id);
+        if (!habit) {
+            return res.status(404).json({ success: false, message: 'Habit not found' });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const hasToday = habit.completionHistory.some(entry => {
+            const d = new Date(entry.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === today.getTime();
+        });
+
+        if (completed) {
+            if (hasToday) {
+                return res.json({ success: true, message: 'Already completed today', data: habit });
+            }
+            await habit.complete();
+            return res.json({ success: true, message: `Marked complete. Streak: ${habit.streak}`, data: habit });
+        } else {
+            if (!hasToday) {
+                return res.json({ success: true, message: 'Already incomplete for today', data: habit });
+            }
+            await habit.uncompleteToday();
+            return res.json({ success: true, message: 'Marked incomplete for today', data: habit });
+        }
+    } catch (error) {
+        console.error('Error toggling today status:', error);
+        const status = error.message === 'Habit not completed today' ? 400 : 500;
+        res.status(status).json({ success: false, message: error.message || 'Failed to toggle today status' });
+    }
+});
+
 // ========== PUT Routes ==========
 
 /**

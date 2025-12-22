@@ -208,6 +208,7 @@ const API_URL = '/api/habits';
 const habitForm = document.getElementById('habit-form');
 const habitInput = document.getElementById('habit-input');
 const habitsContainer = document.getElementById('habits-container');
+const habitDescInput = document.getElementById('habit-description');
 
 // ========== Event Listeners ==========
 // Listen for form submission to add new habit
@@ -226,6 +227,7 @@ async function addHabit(e) {
     e.preventDefault(); // Prevent form from submitting normally
     
     const habitName = habitInput.value.trim();
+    const habitDescription = habitDescInput ? habitDescInput.value.trim() : '';
     
     // Validate input
     if (habitName === '') {
@@ -240,7 +242,7 @@ async function addHabit(e) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name: habitName })
+            body: JSON.stringify({ name: habitName, description: habitDescription })
         });
         
         const data = await response.json();
@@ -251,6 +253,7 @@ async function addHabit(e) {
             
             // Clear input field
             habitInput.value = '';
+            if (habitDescInput) habitDescInput.value = '';
             
             // Show success message
             showMessage('Habit added successfully! 🎉', 'success');
@@ -276,10 +279,10 @@ function displayHabits() {
         return;
     }
     
-    // Create and display each habit card
+    // Create and display each habit checklist item
     habits.forEach(habit => {
-        const habitCard = createHabitCard(habit);
-        habitsContainer.appendChild(habitCard);
+        const item = createHabitListItem(habit);
+        habitsContainer.appendChild(item);
     });
 }
 
@@ -288,79 +291,82 @@ function displayHabits() {
  * @param {Object} habit - The habit object
  * @returns {HTMLElement} The habit card element
  */
-function createHabitCard(habit) {
-    // Create main card container
-    const card = document.createElement('div');
-    card.className = 'habit-card';
-    
-    // Create habit info section
-    const habitInfo = document.createElement('div');
-    habitInfo.className = 'habit-info';
-    
-    const habitName = document.createElement('div');
-    habitName.className = 'habit-name';
-    habitName.textContent = habit.name;
-    
-    const habitStreak = document.createElement('div');
-    habitStreak.className = 'habit-streak';
-    habitStreak.textContent = `🔥 Current streak: ${habit.streak} days`;
-    
-    habitInfo.appendChild(habitName);
-    habitInfo.appendChild(habitStreak);
-    
-    // Create action buttons section
-    const habitActions = document.createElement('div');
-    habitActions.className = 'habit-actions';
-    
-    // Complete button
-    const completeBtn = document.createElement('button');
-    completeBtn.className = 'complete-btn';
-    completeBtn.textContent = 'Complete';
-    completeBtn.onclick = () => completeHabit(habit._id);
-    
-    // Delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.onclick = () => deleteHabit(habit._id);
-    
-    habitActions.appendChild(completeBtn);
-    habitActions.appendChild(deleteBtn);
-    
-    // Assemble the card
-    card.appendChild(habitInfo);
-    card.appendChild(habitActions);
-    
-    return card;
+function createHabitListItem(habit) {
+    const isTodayCompleted = completedToday(habit);
+
+    const item = document.createElement('div');
+    item.className = 'habit-item' + (isTodayCompleted ? ' completed' : '');
+
+    const left = document.createElement('label');
+    left.className = 'habit-left';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'habit-checkbox';
+    checkbox.checked = isTodayCompleted;
+    checkbox.addEventListener('change', () => setToday(habit._id, checkbox.checked));
+
+    const textWrap = document.createElement('div');
+    textWrap.className = 'habit-text';
+
+    const title = document.createElement('div');
+    title.className = 'habit-title';
+    title.textContent = habit.name;
+
+    const desc = document.createElement('div');
+    desc.className = 'habit-desc';
+    desc.textContent = habit.description || '';
+
+    textWrap.appendChild(title);
+    if (habit.description) textWrap.appendChild(desc);
+
+    left.appendChild(checkbox);
+    left.appendChild(textWrap);
+
+    const right = document.createElement('div');
+    right.className = 'habit-right';
+
+    const streak = document.createElement('span');
+    streak.className = 'streak-badge';
+    streak.textContent = `🔥 ${habit.streak}`;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => deleteHabit(habit._id);
+
+    right.appendChild(streak);
+    right.appendChild(delBtn);
+
+    item.appendChild(left);
+    item.appendChild(right);
+
+    return item;
 }
 
 /**
  * Mark a habit as completed for today
  * @param {string} habitId - The ID of the habit to complete
  */
-async function completeHabit(habitId) {
+async function setToday(habitId, completed) {
     try {
-        const response = await fetch(`${API_URL}/${habitId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        const response = await fetch(`${API_URL}/${habitId}/today`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completed })
         });
-        
         const data = await response.json();
-        
         if (data.success) {
-            // Show success message
-            alert(data.message);
-            
-            // Reload habits from server
             await loadHabits();
+            showMessage(completed ? 'Marked complete for today ✅' : 'Marked incomplete for today ↩️', 'success');
         } else {
-            alert(data.message || 'Failed to complete habit');
+            showMessage(data.message || 'Update failed', 'error');
+            await loadHabits();
         }
     } catch (error) {
-        console.error('Error completing habit:', error);
-        alert('Failed to complete habit. Please try again.');
+        console.error('Error updating today status:', error);
+        showMessage('Failed to update. Please try again.', 'error');
+        await loadHabits();
     }
 }
 
@@ -397,6 +403,16 @@ async function deleteHabit(habitId) {
         console.error('Error deleting habit:', error);
         alert('Failed to delete habit. Please try again.');
     }
+}
+
+// Helpers
+function completedToday(habit) {
+    if (!habit.lastCompleted) return false;
+    const last = new Date(habit.lastCompleted);
+    const today = new Date();
+    last.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return last.getTime() === today.getTime();
 }
 
 /**
