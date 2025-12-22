@@ -1,0 +1,41 @@
+<!-- 
+    Main Habit Tracker Page (EJS Template)
+    This is the main view that displays the habit tracker interface
+-->
+<%- include('partials/header') %>
+
+<!-- Main container for the habit tracker app -->
+<div class="container">
+    <!-- Header section -->
+    <header>
+        <h1>Habit Tracker</h1>
+        <p class="subtitle">Build better habits, one day at a time</p>
+    </header>
+
+    <!-- Main content area -->
+    <main>
+        <!-- Form to add new habits -->
+        <section class="add-habit-section">
+            <h2>Add New Habit</h2>
+            <form id="habit-form">
+                <input 
+                    type="text" 
+                    id="habit-input" 
+                    placeholder="Enter a new habit..."
+                    required
+                >
+                <button type="submit">Add Habit</button>
+            </form>
+        </section>
+
+        <!-- Display area for habit list -->
+        <section class="habits-section">
+            <h2>My Habits</h2>
+            <div id="habits-container">
+                <!-- Habits will be dynamically added here by JavaScript -->
+                <p style="text-align: center; color: #999;">Loading habits...</p>
+            </div>
+        </section>
+    </main>
+
+<%- include('partials/footer') %>

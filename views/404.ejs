@@ -1,0 +1,55 @@
+<!-- 
+    404 Error Page (EJS Template)
+    Displayed when a route is not found
+-->
+<%- include('partials/header') %>
+
+<div class="container">
+    <div class="error-page">
+        <h1>404</h1>
+        <h2>Page Not Found</h2>
+        <p>Oops! The page you're looking for doesn't exist.</p>
+        <a href="/" class="btn">Go Back Home</a>
+    </div>
+</div>
+
+<style>
+    .error-page {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .error-page h1 {
+        font-size: 6rem;
+        color: #667eea;
+        margin-bottom: 20px;
+    }
+    
+    .error-page h2 {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 15px;
+    }
+    
+    .error-page p {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 30px;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background-color 0.3s;
+    }
+    
+    .btn:hover {
+        background-color: #5568d3;
+    }
+</style>
+
+<%- include('partials/footer') %>
