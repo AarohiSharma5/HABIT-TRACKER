@@ -7,12 +7,18 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { verifyIdToken } = require('../config/firebase');
+const { authLimiter, googleAuthLimiter, resetRateLimit } = require('../middleware/rateLimiter');
+const { 
+    logSuspiciousActivity, 
+    validateOrigin, 
+    preventDuplicateSignIn 
+} = require('../middleware/security');
 
 /**
  * POST /auth/signup
  * Register a new user
  */
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, logSuspiciousActivity, async (req, res) => {
     try {
         const { userId, name, password } = req.body;
         
@@ -97,7 +103,7 @@ router.post('/signup', async (req, res) => {
  * POST /auth/login
  * Login user
  */
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, logSuspiciousActivity, async (req, res) => {
     try {
         const { userId, password } = req.body;
         
@@ -131,6 +137,10 @@ router.post('/login', async (req, res) => {
         req.session.userId = user._id;
         req.session.userName = user.name;
         
+        // Reset rate limit on successful login
+        const identifier = req.ip || req.connection.remoteAddress;
+        resetRateLimit(identifier, 'auth');
+        
         res.json({
             success: true,
             message: 'Login successful!',
@@ -153,7 +163,12 @@ router.post('/login', async (req, res) => {
  * POST /auth/google
  * Authenticate with Google Firebase
  */
-router.post('/google', async (req, res) => {
+router.post('/google', 
+    googleAuthLimiter, 
+    logSuspiciousActivity, 
+    validateOrigin([]), 
+    preventDuplicateSignIn, 
+    async (req, res) => {
     try {
         const { idToken } = req.body;
         
@@ -164,17 +179,36 @@ router.post('/google', async (req, res) => {
             });
         }
         
-        // Verify Firebase ID token
+        // Verify Firebase ID token with enhanced security
         const verificationResult = await verifyIdToken(idToken);
         
         if (!verificationResult.success) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid Firebase token'
+                message: verificationResult.error || 'Invalid Firebase token',
+                code: verificationResult.code
             });
         }
         
         const firebaseUser = verificationResult.user;
+        
+        // Additional security: Verify email is present
+        if (!firebaseUser.email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required for authentication',
+                code: 'EMAIL_REQUIRED'
+            });
+        }
+        
+        // Security check: Verify the sign-in provider is Google
+        if (firebaseUser.firebase?.sign_in_provider !== 'google.com') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only Google authentication is supported',
+                code: 'INVALID_PROVIDER'
+            });
+        }
         
         // Check if user already exists by googleId
         let user = await User.findOne({ googleId: firebaseUser.uid });
@@ -238,6 +272,10 @@ router.post('/google', async (req, res) => {
         req.session.userId = user._id;
         req.session.userName = user.name;
         req.session.authProvider = 'google';
+        
+        // Reset rate limit on successful authentication
+        const identifier = req.ip || req.connection.remoteAddress;
+        resetRateLimit(identifier, 'google');
         
         res.json({
             success: true,

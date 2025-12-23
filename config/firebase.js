@@ -50,16 +50,69 @@ function initializeFirebase() {
  */
 async function verifyIdToken(idToken) {
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        // Verify token with additional security checks
+        const decodedToken = await admin.auth().verifyIdToken(idToken, true); // checkRevoked = true
+        
+        // Additional security validations
+        const now = Math.floor(Date.now() / 1000);
+        
+        // Check if token is too old (issued more than 1 hour ago)
+        if (decodedToken.auth_time && (now - decodedToken.auth_time) > 3600) {
+            return {
+                success: false,
+                error: 'Token expired. Please sign in again.',
+                code: 'TOKEN_EXPIRED'
+            };
+        }
+        
+        // Verify token issuer
+        const expectedIssuer = `https://securetoken.google.com/${process.env.FIREBASE_PROJECT_ID}`;
+        if (decodedToken.iss !== expectedIssuer) {
+            return {
+                success: false,
+                error: 'Invalid token issuer',
+                code: 'INVALID_ISSUER'
+            };
+        }
+        
+        // Verify audience matches project ID
+        if (decodedToken.aud !== process.env.FIREBASE_PROJECT_ID) {
+            return {
+                success: false,
+                error: 'Invalid token audience',
+                code: 'INVALID_AUDIENCE'
+            };
+        }
+        
         return {
             success: true,
             user: decodedToken
         };
     } catch (error) {
         console.error('❌ Error verifying token:', error.message);
+        
+        // Provide specific error messages
+        let errorMessage = 'Authentication failed';
+        let errorCode = 'AUTH_ERROR';
+        
+        if (error.code === 'auth/id-token-expired') {
+            errorMessage = 'Token expired. Please sign in again.';
+            errorCode = 'TOKEN_EXPIRED';
+        } else if (error.code === 'auth/id-token-revoked') {
+            errorMessage = 'Token has been revoked. Please sign in again.';
+            errorCode = 'TOKEN_REVOKED';
+        } else if (error.code === 'auth/invalid-id-token') {
+            errorMessage = 'Invalid authentication token';
+            errorCode = 'INVALID_TOKEN';
+        } else if (error.code === 'auth/user-disabled') {
+            errorMessage = 'User account has been disabled';
+            errorCode = 'USER_DISABLED';
+        }
+        
         return {
             success: false,
-            error: error.message
+            error: errorMessage,
+            code: errorCode
         };
     }
 }
