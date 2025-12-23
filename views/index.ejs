@@ -14,6 +14,10 @@
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-all-habits">📋 All Habits</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-analytics">📈 Analytics</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-weekly-progress">📅 Weekly Progress</a></li>
+        <li class="nav-item user-menu">
+            <span class="user-name">👤 <%= userName %></span>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </li>
     </ul>
 </nav>
 
@@ -64,6 +68,16 @@
                         id="custom-category-input" 
                         placeholder="e.g., Finance, Hobbies, etc."
                     >
+                </div>
+                <div class="form-group">
+                    <label for="habit-frequency">How many days per week?</label>
+                    <select id="habit-frequency">
+                        <option value="7" selected>🔥 7 Days (Daily - No rest days)</option>
+                        <option value="6">💪 6 Days (1 rest day per week)</option>
+                        <option value="5">⭐ 5 Days (2 rest days per week)</option>
+                        <option value="4">🎯 4 Days (3 rest days per week)</option>
+                    </select>
+                    <small class="form-help">Choose how many days you want to maintain this habit weekly</small>
                 </div>
                 <button type="submit" class="btn-primary">Create Habit</button>
             </form>
@@ -162,6 +176,22 @@
             <h1>Weekly Progress</h1>
             <p class="subtitle">Detailed weekly analysis for each habit</p>
         </header>
+
+        <!-- Color Legend -->
+        <div class="progress-legend">
+            <div class="legend-item">
+                <span class="legend-dot completed"></span>
+                <span class="legend-label">Completed</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot skipped"></span>
+                <span class="legend-label">Skipped</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot missed"></span>
+                <span class="legend-label">Missed</span>
+            </div>
+        </div>
 
         <section class="weekly-analysis-section">
             <div id="weekly-progress-container">

@@ -15,7 +15,8 @@ const Habit = require('../models/Habit');
  */
 router.get('/analytics/daily', async (req, res) => {
     try {
-        const habits = await Habit.findActive();
+        const userId = req.session.userId;
+        const habits = await Habit.findActive(userId);
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -84,7 +85,8 @@ router.get('/analytics/daily', async (req, res) => {
  */
 router.get('/analytics/weekly', async (req, res) => {
     try {
-        const habits = await Habit.findActive();
+        const userId = req.session.userId;
+        const habits = await Habit.findActive(userId);
         
         const weeklyData = habits.map(habit => {
             const weekStatus = habit.getWeeklyStatus();
@@ -100,6 +102,7 @@ router.get('/analytics/weekly', async (req, res) => {
                 name: habit.name,
                 category: habit.category,
                 streak: habit.streak,
+                daysPerWeek: habit.daysPerWeek || 7,
                 completed,
                 skipped,
                 total,
@@ -128,7 +131,8 @@ router.get('/analytics/weekly', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
-        const habits = await Habit.findActive();
+        const userId = req.session.userId;
+        const habits = await Habit.findActive(userId);
         res.json({
             success: true,
             count: habits.length,
@@ -150,7 +154,8 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const userId = req.session.userId;
+        const habit = await Habit.findOne({ _id: req.params.id, userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -203,7 +208,8 @@ router.get('/category/:category', async (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const { name, description, category, frequency } = req.body;
+        const userId = req.session.userId;
+        const { name, description, category, frequency, daysPerWeek } = req.body;
         
         // Validate required fields
         if (!name || name.trim() === '') {
@@ -213,12 +219,23 @@ router.post('/', async (req, res) => {
             });
         }
         
+        // Validate daysPerWeek if provided
+        const validDaysPerWeek = daysPerWeek ? parseInt(daysPerWeek) : 7;
+        if (validDaysPerWeek < 1 || validDaysPerWeek > 7) {
+            return res.status(400).json({
+                success: false,
+                message: 'Days per week must be between 1 and 7'
+            });
+        }
+        
         // Create new habit
         const habit = new Habit({
+            userId,
             name: name.trim(),
             description: description?.trim() || '',
             category: category?.trim() || 'general',
-            frequency: frequency || 'daily'
+            frequency: frequency || 'daily',
+            daysPerWeek: validDaysPerWeek
         });
         
         await habit.save();
@@ -244,7 +261,7 @@ router.post('/', async (req, res) => {
  */
 router.post('/:id/complete', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -285,7 +302,7 @@ router.post('/:id/complete', async (req, res) => {
  */
 router.post('/:id/uncomplete', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -346,7 +363,7 @@ router.put('/:id/today', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Field "completed" must be boolean' });
         }
 
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         if (!habit) {
             return res.status(404).json({ success: false, message: 'Habit not found' });
         }
@@ -406,7 +423,7 @@ router.put('/:id/today', async (req, res) => {
  */
 router.get('/:id/weekly', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -447,7 +464,7 @@ router.get('/:id/weekly', async (req, res) => {
  */
 router.post('/:id/skip', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -497,7 +514,7 @@ router.put('/:id/day', async (req, res) => {
             });
         }
         
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({
@@ -626,7 +643,7 @@ router.delete('/:id', async (req, res) => {
  */
 router.post('/:id/reset-streak', async (req, res) => {
     try {
-        const habit = await Habit.findById(req.params.id);
+        const habit = await Habit.findOne({ _id: req.params.id, userId: req.session.userId });
         
         if (!habit) {
             return res.status(404).json({

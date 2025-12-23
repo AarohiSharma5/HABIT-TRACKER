@@ -18,6 +18,16 @@ const mongoose = require('mongoose');
 
 // Define the Habit schema with persistent data structure
 const habitSchema = new mongoose.Schema({
+    // ========== USER ASSOCIATION ==========
+    
+    // User who owns this habit
+    // PERSISTENCE: Links habit to user account
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: [true, 'User ID is required']
+    },
+    
     // ========== CORE HABIT INFORMATION ==========
     
     // Name of the habit (e.g., "Drink 8 glasses of water")
@@ -106,6 +116,16 @@ const habitSchema = new mongoose.Schema({
         type: String,
         enum: ['daily', 'weekly', 'custom'],
         default: 'daily'
+    },
+    
+    // Number of days per week the user wants to maintain this habit
+    // PERSISTENCE: Used to calculate allowed skips and streak logic
+    // Default is 7 (daily), can be 4, 5, 6, or 7
+    daysPerWeek: {
+        type: Number,
+        default: 7,
+        min: [1, 'Days per week must be at least 1'],
+        max: [7, 'Days per week cannot exceed 7']
     }
 }, {
     // ========== AUTOMATIC TIMESTAMPS (MongoDB-managed) ==========
@@ -195,10 +215,12 @@ habitSchema.methods.skipDay = async function(date) {
         throw new Error('Day already has a status. Remove it first to skip.');
     }
     
-    // Check weekly skip limit (1 per week)
+    // Check weekly skip limit based on daysPerWeek
+    // If user chose 5 days/week, they can skip 2 days (7-5=2)
+    const allowedSkips = 7 - this.daysPerWeek;
     const weekSkips = this.getWeeklyStatus(skipDate).filter(day => day.status === 'skipped');
-    if (weekSkips.length >= 1) {
-        throw new Error('You can only skip 1 day per week');
+    if (weekSkips.length >= allowedSkips) {
+        throw new Error(`You can only skip ${allowedSkips} day${allowedSkips !== 1 ? 's' : ''} per week based on your ${this.daysPerWeek}-day frequency`);
     }
     
     // Check for consecutive skips
@@ -436,24 +458,24 @@ habitSchema.methods._recomputeFromHistory = function () {
 // ========== Static Methods (Class-level queries) ==========
 
 /**
- * Find all active habits
+ * Find all active habits for a specific user
  * 
- * PERSISTENCE: Queries MongoDB for all habits where isActive = true
+ * PERSISTENCE: Queries MongoDB for all habits where isActive = true and belongs to user
  * Returns habits sorted by creation date (newest first)
  * Called on every page load to populate the UI
  */
-habitSchema.statics.findActive = function() {
-    return this.find({ isActive: true }).sort({ createdAt: -1 });
+habitSchema.statics.findActive = function(userId) {
+    return this.find({ userId, isActive: true }).sort({ createdAt: -1 });
 };
 
 /**
- * Get habits by category
+ * Get habits by category for a specific user
  * 
- * PERSISTENCE: Queries MongoDB for habits matching category
+ * PERSISTENCE: Queries MongoDB for habits matching category and user
  * Allows filtering after page reload
  */
-habitSchema.statics.findByCategory = function(category) {
-    return this.find({ category, isActive: true }).sort({ createdAt: -1 });
+habitSchema.statics.findByCategory = function(userId, category) {
+    return this.find({ userId, category, isActive: true }).sort({ createdAt: -1 });
 };
 
 // ========== Database Indexes (Performance Optimization) ==========

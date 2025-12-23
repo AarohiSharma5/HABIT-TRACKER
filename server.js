@@ -19,6 +19,8 @@ const connectDB = require('./config/database');
 
 // Import routes
 const habitRoutes = require('./routes/habits');
+const authRoutes = require('./routes/auth');
+const { requireAuth, redirectIfAuthenticated } = require('./middleware/auth');
 
 // Initialize Express app
 const app = express();
@@ -58,16 +60,41 @@ app.use(session({
 
 // ========== Routes ==========
 
-// Home route - renders the main habit tracker page
-app.get('/', (req, res) => {
-    res.render('index', { 
-        title: 'Habit Tracker',
-        currentYear: new Date().getFullYear()
+// Authentication routes (public)
+app.use('/auth', authRoutes);
+
+// Login page
+app.get('/login', redirectIfAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'login.html'));
+});
+
+// Signup page
+app.get('/signup', redirectIfAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'signup.html'));
+});
+
+// Logout route
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
+        }
+        res.redirect('/login');
     });
 });
 
-// Habit API routes
-app.use('/api/habits', habitRoutes);
+// Protected routes - require authentication
+// Home route - renders the main habit tracker page
+app.get('/', requireAuth, (req, res) => {
+    res.render('index', { 
+        title: 'Habit Tracker',
+        currentYear: new Date().getFullYear(),
+        userName: req.session.userName
+    });
+});
+
+// Habit API routes (protected)
+app.use('/api/habits', requireAuth, habitRoutes);
 
 // ========== Error Handling ==========
 

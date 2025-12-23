@@ -100,6 +100,7 @@ async function addHabit(e) {
     
     const habitName = habitInput.value.trim();
     let category = habitCategoryInput.value;
+    const daysPerWeek = parseInt(document.getElementById('habit-frequency').value) || 7;
     
     // Check if custom category is selected
     if (category === 'other') {
@@ -122,7 +123,7 @@ async function addHabit(e) {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: habitName, category })
+            body: JSON.stringify({ name: habitName, category, daysPerWeek })
         });
         
         const data = await response.json();
@@ -133,6 +134,7 @@ async function addHabit(e) {
             if (customCategoryInput) customCategoryInput.value = '';
             document.getElementById('custom-category-group').style.display = 'none';
             habitCategoryInput.value = 'health'; // Reset to default
+            document.getElementById('habit-frequency').value = '7'; // Reset to 7 days
             await loadHabits();
             updateQuickStats();
             showMessage('Habit added successfully! 🎉', 'success');
@@ -200,11 +202,19 @@ function createHabitElement(habit) {
     
     console.log(`Habit: ${habit.name}, Completed today: ${isCompletedToday}, Streak: ${habit.streak}`);
     
+    // Get frequency display text
+    const frequencyText = habit.daysPerWeek === 7 
+        ? 'Daily' 
+        : `${habit.daysPerWeek} days/week`;
+    
     habitDiv.innerHTML = `
         <div class="habit-header">
             <div>
                 <h3>${habit.name}</h3>
-                ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
+                <div class="habit-meta">
+                    ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
+                    <span class="frequency-tag">${frequencyText}</span>
+                </div>
             </div>
             <div class="habit-stats">
                 <span class="streak">🔥 ${habit.streak} day streak</span>
@@ -299,6 +309,7 @@ async function handleDayClick(habitId, day, dayIndex) {
         if (data.success) {
             await loadHabits();
             loadWeeklyStatus(habitId);
+            refreshWeeklyProgress(); // Refresh weekly progress if visible
         } else {
             alert(data.message || 'Failed to update status');
         }
@@ -336,8 +347,7 @@ async function toggleToday(habitId, isChecked) {
                 }
                 if (document.getElementById('page-analytics').classList.contains('active')) {
                     loadAnalytics();
-                }
-                showMessage('✅ Habit marked complete for today!', 'success');
+                }                refreshWeeklyProgress(); // Refresh weekly progress if visible                showMessage('✅ Habit marked complete for today!', 'success');
             } else {
                 console.error('Failed to mark habit:', data.message);
                 // Uncheck the checkbox if it failed
@@ -367,6 +377,7 @@ async function toggleToday(habitId, isChecked) {
                 if (document.getElementById('page-analytics').classList.contains('active')) {
                     loadAnalytics();
                 }
+                refreshWeeklyProgress(); // Refresh weekly progress if visible
                 showMessage('↩️ Habit unmarked for today', 'info');
             } else {
                 console.error('Failed to unmark habit:', data.message);
@@ -607,6 +618,26 @@ async function loadWeeklyProgress() {
 }
 
 /**
+ * Refresh weekly progress if on that page
+ */
+function refreshWeeklyProgress() {
+    const weeklyPage = document.getElementById('page-weekly-progress');
+    if (weeklyPage && weeklyPage.classList.contains('active')) {
+        loadWeeklyProgress();
+    }
+}
+
+/**
+ * Refresh weekly progress if on that page
+ */
+function refreshWeeklyProgress() {
+    const weeklyPage = document.getElementById('page-weekly-progress');
+    if (weeklyPage && weeklyPage.classList.contains('active')) {
+        loadWeeklyProgress();
+    }
+}
+
+/**
  * Display weekly progress for all habits
  */
 function displayWeeklyProgress(weeklyData) {
@@ -631,21 +662,66 @@ function displayWeeklyProgress(weeklyData) {
 function createWeeklyHabitCard(habit) {
     const card = document.createElement('div');
     card.className = 'weekly-habit-card';
+    card.setAttribute('data-habit-id', habit._id);
+    
+    // Calculate consistency percentage based on daysPerWeek target
+    const targetDays = habit.daysPerWeek || 7;
+    const completedDays = habit.completed;
+    const skippedDays = habit.skipped;
+    const totalDone = completedDays + skippedDays; // Skipped counts as done
+    const consistencyPercentage = Math.round((totalDone / targetDays) * 100);
+    
+    // Calculate allowed skips (7 - targetDays)
+    const allowedSkips = 7 - targetDays;
+    
+    // Determine consistency status color
+    let consistencyClass = 'low';
+    if (consistencyPercentage >= 90) consistencyClass = 'excellent';
+    else if (consistencyPercentage >= 75) consistencyClass = 'good';
+    else if (consistencyPercentage >= 50) consistencyClass = 'moderate';
+    
     card.innerHTML = `
-        <h3>${habit.name}</h3>
-        ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
+        <div class="weekly-card-header">
+            <div class="habit-info">
+                <h3>${habit.name}</h3>
+                <div class="habit-tags">
+                    ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
+                    <span class="frequency-tag">${targetDays} days/week</span>
+                </div>
+            </div>
+            <div class="consistency-circle ${consistencyClass}">
+                <svg viewBox="0 0 100 100">
+                    <circle class="circle-bg" cx="50" cy="50" r="40"></circle>
+                    <circle class="circle-progress" cx="50" cy="50" r="40" 
+                        style="stroke-dashoffset: ${251.2 - (251.2 * consistencyPercentage) / 100};"></circle>
+                </svg>
+                <div class="consistency-text">
+                    <div class="percentage">${consistencyPercentage}%</div>
+                    <div class="label">Consistency</div>
+                </div>
+            </div>
+        </div>
         <div class="weekly-stats">
             <div class="stat-item">
-                <span class="stat-label">Completed</span>
-                <span class="stat-value">${habit.completed}/7</span>
+                <span class="stat-icon">✅</span>
+                <div>
+                    <span class="stat-label">Completed</span>
+                    <span class="stat-value">${completedDays}/${targetDays}</span>
+                </div>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Completion Rate</span>
-                <span class="stat-value">${habit.completionRate}%</span>
+                <span class="stat-icon">⏭️</span>
+                <div>
+                    <span class="stat-label">Skipped</span>
+                    <span class="stat-value">${skippedDays}/${allowedSkips}</span>
+                </div>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Current Streak</span>
-                <span class="stat-value">🔥 ${habit.streak}</span>
+                <span class="stat-icon">🔥</span>
+                <div>
+                    <span class="stat-label">Current Streak</span>
+                    <span class="stat-value">${habit.streak}</span>
+                </div>
             </div>
         </div>
         <div class="weekly-chart-container">
@@ -682,23 +758,28 @@ function renderWeeklyChart(habit) {
             datasets: [{
                 label: 'Completion',
                 data: completionData,
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
                 fill: true,
                 pointBackgroundColor: habit.weekStatus.map(day => {
-                    if (day.status === 'completed') return 'rgb(34, 197, 94)';
-                    if (day.status === 'skipped') return 'rgb(234, 179, 8)';
-                    return 'rgb(156, 163, 175)';
+                    if (day.status === 'completed') return 'rgb(34, 197, 94)'; // Green
+                    if (day.status === 'skipped') return 'rgb(234, 179, 8)'; // Yellow
+                    return 'rgb(239, 68, 68)'; // Red
                 }),
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
-                pointRadius: 6
+                pointRadius: 8,
+                pointHoverRadius: 10
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 1000,
+                easing: 'easeOutCubic'
+            },
             scales: {
                 y: {
                     beginAtZero: true,
@@ -719,6 +800,27 @@ function renderWeeklyChart(habit) {
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 13,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        size: 12
+                    },
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            const status = habit.weekStatus[context.dataIndex].status;
+                            if (status === 'completed') return '✅ Completed';
+                            if (status === 'skipped') return '⏭️ Skipped';
+                            return '❌ Missed';
+                        }
+                    }
                 }
             }
         }
