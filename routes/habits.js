@@ -10,6 +10,119 @@ const Habit = require('../models/Habit');
 // ========== GET Routes ==========
 
 /**
+ * GET /api/habits/analytics/daily
+ * Get daily analytics across all habits
+ */
+router.get('/analytics/daily', async (req, res) => {
+    try {
+        const habits = await Habit.findActive();
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let completed = 0;
+        let skipped = 0;
+        let notDone = 0;
+        
+        const categoryStats = {};
+        
+        habits.forEach(habit => {
+            // Count today's status
+            const todayEntry = habit.completionHistory.find(entry => {
+                const d = new Date(entry.date);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === today.getTime();
+            });
+            
+            if (todayEntry) {
+                if (todayEntry.status === 'completed') completed++;
+                else if (todayEntry.status === 'skipped') skipped++;
+                else notDone++;
+            } else {
+                notDone++;
+            }
+            
+            // Category stats (count skips as completed)
+            const category = habit.category || 'general';
+            if (!categoryStats[category]) {
+                categoryStats[category] = { completed: 0, total: 0 };
+            }
+            categoryStats[category].total++;
+            if (todayEntry && (todayEntry.status === 'completed' || todayEntry.status === 'skipped')) {
+                categoryStats[category].completed++;
+            }
+        });
+        
+        const total = habits.length;
+        // Count skipped days as complete for completion rate
+        const effectiveCompleted = completed + skipped;
+        
+        res.json({
+            success: true,
+            data: {
+                total,
+                completed,
+                skipped,
+                notDone,
+                completionRate: total > 0 ? Math.round((effectiveCompleted / total) * 100) : 0,
+                categoryStats
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching daily analytics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch analytics',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/habits/analytics/weekly
+ * Get weekly analytics for all habits
+ */
+router.get('/analytics/weekly', async (req, res) => {
+    try {
+        const habits = await Habit.findActive();
+        
+        const weeklyData = habits.map(habit => {
+            const weekStatus = habit.getWeeklyStatus();
+            const completed = weekStatus.filter(d => d.status === 'completed').length;
+            const skipped = weekStatus.filter(d => d.status === 'skipped').length;
+            const total = 7;
+            // Count skipped days as complete for completion rate (6/7 + 1 skip = 100%)
+            const effectiveCompleted = completed + skipped;
+            const completionRate = Math.round((effectiveCompleted / total) * 100);
+            
+            return {
+                _id: habit._id,
+                name: habit.name,
+                category: habit.category,
+                streak: habit.streak,
+                completed,
+                skipped,
+                total,
+                completionRate,
+                weekStatus
+            };
+        });
+        
+        res.json({
+            success: true,
+            data: weeklyData
+        });
+    } catch (error) {
+        console.error('Error fetching weekly analytics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch weekly analytics',
+            error: error.message
+        });
+    }
+});
+
+/**
  * GET /api/habits
  * Get all active habits
  */
@@ -167,13 +280,68 @@ router.post('/:id/complete', async (req, res) => {
 });
 
 /**
+ * POST /api/habits/:id/uncomplete
+ * Remove today's completion for a habit (undo)
+ */
+router.post('/:id/uncomplete', async (req, res) => {
+    try {
+        const habit = await Habit.findById(req.params.id);
+        
+        if (!habit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Habit not found'
+            });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Find and remove today's completion entry
+        const todayIndex = habit.completionHistory.findIndex(entry => {
+            const d = new Date(entry.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === today.getTime();
+        });
+        
+        if (todayIndex === -1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Habit not completed today'
+            });
+        }
+        
+        // Remove today's entry
+        habit.completionHistory.splice(todayIndex, 1);
+        
+        // Recompute streak from history
+        habit._recomputeFromHistory();
+        
+        await habit.save();
+        
+        res.json({
+            success: true,
+            message: 'Habit unmarked for today',
+            data: habit
+        });
+    } catch (error) {
+        console.error('Error uncompleting habit:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to uncomplete habit',
+            error: error.message
+        });
+    }
+});
+
+/**
  * PUT /api/habits/:id/today
  * Mark a habit as completed or incomplete for today
- * Body: { completed: boolean }
+ * Body: { completed: boolean, date?: string }
  */
 router.put('/:id/today', async (req, res) => {
     try {
-        const { completed } = req.body;
+        const { completed, date } = req.body;
         if (typeof completed !== 'boolean') {
             return res.status(400).json({ success: false, message: 'Field "completed" must be boolean' });
         }
@@ -183,32 +351,195 @@ router.put('/:id/today', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Habit not found' });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const targetDate = date ? new Date(date) : new Date();
+        targetDate.setHours(0, 0, 0, 0);
 
-        const hasToday = habit.completionHistory.some(entry => {
+        const hasEntry = habit.completionHistory.some(entry => {
             const d = new Date(entry.date);
             d.setHours(0, 0, 0, 0);
-            return d.getTime() === today.getTime();
+            return d.getTime() === targetDate.getTime();
         });
 
         if (completed) {
-            if (hasToday) {
-                return res.json({ success: true, message: 'Already completed today', data: habit });
+            if (hasEntry) {
+                return res.json({ success: true, message: 'Already has entry for this day', data: habit });
             }
-            await habit.complete();
+            // For backdated completions, add directly instead of using complete()
+            if (date) {
+                habit.completionHistory.push({
+                    date: targetDate,
+                    status: 'completed'
+                });
+                habit._recomputeFromHistory();
+                await habit.save();
+            } else {
+                await habit.complete();
+            }
             return res.json({ success: true, message: `Marked complete. Streak: ${habit.streak}`, data: habit });
         } else {
-            if (!hasToday) {
-                return res.json({ success: true, message: 'Already incomplete for today', data: habit });
+            if (!hasEntry) {
+                return res.json({ success: true, message: 'Already incomplete for this day', data: habit });
             }
-            await habit.uncompleteToday();
-            return res.json({ success: true, message: 'Marked incomplete for today', data: habit });
+            // Remove entry for this date
+            const idx = habit.completionHistory.findIndex(entry => {
+                const d = new Date(entry.date);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === targetDate.getTime();
+            });
+            if (idx !== -1) {
+                habit.completionHistory.splice(idx, 1);
+                habit._recomputeFromHistory();
+                await habit.save();
+            }
+            return res.json({ success: true, message: 'Removed entry for this day', data: habit });
         }
     } catch (error) {
         console.error('Error toggling today status:', error);
         const status = error.message === 'Habit not completed today' ? 400 : 500;
         res.status(status).json({ success: false, message: error.message || 'Failed to toggle today status' });
+    }
+});
+
+/**
+ * GET /api/habits/:id/weekly
+ * Get weekly status for a habit (7 days Mon-Sun)
+ */
+router.get('/:id/weekly', async (req, res) => {
+    try {
+        const habit = await Habit.findById(req.params.id);
+        
+        if (!habit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Habit not found'
+            });
+        }
+        
+        // Get reference date from query param or use today
+        const referenceDate = req.query.date ? new Date(req.query.date) : new Date();
+        const weeklyStatus = habit.getWeeklyStatus(referenceDate);
+        
+        res.json({
+            success: true,
+            data: {
+                habit: {
+                    _id: habit._id,
+                    name: habit.name,
+                    streak: habit.streak
+                },
+                week: weeklyStatus
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching weekly status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch weekly status',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/habits/:id/skip
+ * Mark a day as skipped (intentionally not done)
+ * Body: { date: "2025-12-23" }
+ */
+router.post('/:id/skip', async (req, res) => {
+    try {
+        const habit = await Habit.findById(req.params.id);
+        
+        if (!habit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Habit not found'
+            });
+        }
+        
+        const skipDate = req.body.date ? new Date(req.body.date) : new Date();
+        await habit.skipDay(skipDate);
+        
+        res.json({
+            success: true,
+            message: 'Day marked as skipped',
+            data: habit
+        });
+    } catch (error) {
+        console.error('Error skipping day:', error);
+        const status = error.message.includes('cannot') || error.message.includes('only') || error.message.includes('already') ? 400 : 500;
+        res.status(status).json({
+            success: false,
+            message: error.message || 'Failed to skip day'
+        });
+    }
+});
+
+/**
+ * PUT /api/habits/:id/day
+ * Mark a specific day as completed or skipped
+ * Body: { date: "2025-12-23", status: "completed" | "skipped" }
+ */
+router.put('/:id/day', async (req, res) => {
+    try {
+        const { date, status } = req.body;
+        
+        if (!date || !status) {
+            return res.status(400).json({
+                success: false,
+                message: 'Date and status are required'
+            });
+        }
+        
+        if (!['completed', 'skipped'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Status must be "completed" or "skipped"'
+            });
+        }
+        
+        const habit = await Habit.findById(req.params.id);
+        
+        if (!habit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Habit not found'
+            });
+        }
+        
+        const targetDate = new Date(date);
+        targetDate.setHours(0, 0, 0, 0);
+        
+        // Remove existing entry for this date if any
+        const existingIdx = habit.completionHistory.findIndex(entry => {
+            const d = new Date(entry.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === targetDate.getTime();
+        });
+        
+        if (existingIdx !== -1) {
+            habit.completionHistory.splice(existingIdx, 1);
+        }
+        
+        if (status === 'completed') {
+            // Use the complete method for completed status
+            await habit.complete();
+        } else if (status === 'skipped') {
+            // Use the skipDay method for skipped status
+            await habit.skipDay(targetDate);
+        }
+        
+        res.json({
+            success: true,
+            message: `Day marked as ${status}`,
+            data: habit
+        });
+    } catch (error) {
+        console.error('Error updating day status:', error);
+        const status = error.message.includes('cannot') || error.message.includes('only') || error.message.includes('already') ? 400 : 500;
+        res.status(status).json({
+            success: false,
+            message: error.message || 'Failed to update day status'
+        });
     }
 });
 

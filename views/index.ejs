@@ -4,43 +4,172 @@
 -->
 <%- include('partials/header') %>
 
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <div class="nav-brand">
+        <h1>📊 Habit Tracker</h1>
+    </div>
+    <ul class="nav-menu">
+        <li class="nav-item"><a href="#" class="nav-link active" data-page="page-add-habit">➕ Add Habit</a></li>
+        <li class="nav-item"><a href="#" class="nav-link" data-page="page-all-habits">📋 All Habits</a></li>
+        <li class="nav-item"><a href="#" class="nav-link" data-page="page-analytics">📈 Analytics</a></li>
+        <li class="nav-item"><a href="#" class="nav-link" data-page="page-weekly-progress">📅 Weekly Progress</a></li>
+    </ul>
+</nav>
+
 <!-- Main container for the habit tracker app -->
 <div class="container">
-    <!-- Header section -->
-    <header>
-        <h1>Habit Tracker</h1>
-        <p class="subtitle">Build better habits, one day at a time</p>
-    </header>
+    
+    <!-- PAGE 1: Add New Habit -->
+    <div id="page-add-habit" class="page active">
+        <header>
+            <h1>Add New Habit</h1>
+            <p class="subtitle">Create a new habit to track daily</p>
+        </header>
 
-    <!-- Main content area -->
-    <main>
-        <!-- Form to add new habits -->
         <section class="add-habit-section">
-            <h2>Add New Habit</h2>
             <form id="habit-form">
-                <input 
-                    type="text" 
-                    id="habit-input" 
-                    placeholder="Habit name (e.g., Drink water)"
-                    required
-                >
-                <input 
-                    type="text" 
-                    id="habit-description" 
-                    placeholder="Optional description"
-                >
-                <button type="submit">Add Habit</button>
+                <div class="form-group">
+                    <label for="habit-input">Habit Name</label>
+                    <input 
+                        type="text" 
+                        id="habit-input" 
+                        placeholder="e.g., Drink 8 glasses of water"
+                        required
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="habit-description">Description (Optional)</label>
+                    <input 
+                        type="text" 
+                        id="habit-description" 
+                        placeholder="e.g., Stay hydrated throughout the day"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="habit-category">Category</label>
+                    <select id="habit-category">
+                        <option value="health">🏃 Health</option>
+                        <option value="productivity">💼 Productivity</option>
+                        <option value="learning">📚 Learning</option>
+                        <option value="mindfulness">🧘 Mindfulness</option>
+                        <option value="social">👥 Social</option>
+                        <option value="other">✏️ Other</option>
+                    </select>
+                </div>
+                <div class="form-group" id="custom-category-group" style="display: none;">
+                    <label for="custom-category-input">Custom Category</label>
+                    <input 
+                        type="text" 
+                        id="custom-category-input" 
+                        placeholder="e.g., Finance, Hobbies, etc."
+                    >
+                </div>
+                <button type="submit" class="btn-primary">Create Habit</button>
             </form>
         </section>
 
-        <!-- Display area for habit list -->
-        <section class="habits-section">
-            <h2>My Habits</h2>
-            <div id="habits-container" class="habit-list">
-                <!-- Habits will be dynamically added here by JavaScript -->
-                <p style="text-align: center; color: #999;">Loading habits...</p>
+        <!-- Quick Stats Preview -->
+        <section class="quick-stats">
+            <h3>Your Quick Stats</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-habits">0</div>
+                    <div class="stat-label">Total Habits</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="active-today">0</div>
+                    <div class="stat-label">Completed Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="longest-streak">0</div>
+                    <div class="stat-label">Longest Streak</div>
+                </div>
             </div>
         </section>
-    </main>
+    </div>
+
+    <!-- PAGE 2: All Habits View -->
+    <div id="page-all-habits" class="page">
+        <header>
+            <h1>All Habits</h1>
+            <p class="subtitle">Manage and track your daily habits</p>
+        </header>
+
+        <section class="habits-section">
+            <div id="habits-container" class="habit-list">
+                <p class="loading-text">Loading habits...</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- PAGE 3: Daily Analytics -->
+    <div id="page-analytics" class="page">
+        <header>
+            <h1>Daily Analytics</h1>
+            <p class="subtitle">Track your progress across all habits</p>
+        </header>
+
+        <section class="analytics-section">
+            <!-- Daily Completion Chart -->
+            <div class="chart-container">
+                <h3>Daily Completion Rate</h3>
+                <canvas id="dailyCompletionChart"></canvas>
+            </div>
+
+            <!-- Daily Status Breakdown -->
+            <div class="chart-container">
+                <h3>Today's Status</h3>
+                <div class="status-breakdown">
+                    <div class="status-item completed-status">
+                        <div class="status-icon">✓</div>
+                        <div class="status-info">
+                            <div class="status-count" id="completed-count">0</div>
+                            <div class="status-label">Completed</div>
+                            <div class="status-percentage" id="completed-percentage">0%</div>
+                        </div>
+                    </div>
+                    <div class="status-item skipped-status">
+                        <div class="status-icon">⊘</div>
+                        <div class="status-info">
+                            <div class="status-count" id="skipped-count">0</div>
+                            <div class="status-label">Skipped</div>
+                            <div class="status-percentage" id="skipped-percentage">0%</div>
+                        </div>
+                    </div>
+                    <div class="status-item notdone-status">
+                        <div class="status-icon">○</div>
+                        <div class="status-info">
+                            <div class="status-count" id="notdone-count">0</div>
+                            <div class="status-label">Not Done</div>
+                            <div class="status-percentage" id="notdone-percentage">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown Chart -->
+            <div class="chart-container">
+                <h3>Completion by Category</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- PAGE 4: Weekly Progress -->
+    <div id="page-weekly-progress" class="page">
+        <header>
+            <h1>Weekly Progress</h1>
+            <p class="subtitle">Detailed weekly analysis for each habit</p>
+        </header>
+
+        <section class="weekly-analysis-section">
+            <div id="weekly-progress-container">
+                <p class="loading-text">Loading weekly progress...</p>
+            </div>
+        </section>
+    </div>
+
+</div>
 
 <%- include('partials/footer') %>
