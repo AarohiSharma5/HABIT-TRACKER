@@ -16,6 +16,7 @@ const MongoStore = require('connect-mongo');
 
 // Import database configuration
 const connectDB = require('./config/database');
+const { initializeFirebase } = require('./config/firebase');
 
 // Import routes
 const habitRoutes = require('./routes/habits');
@@ -27,6 +28,14 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize Firebase Admin (optional - only if Firebase env vars are set)
+if (process.env.FIREBASE_PROJECT_ID) {
+    initializeFirebase();
+} else {
+    console.log('⚠️  Firebase not configured - Google auth will not work');
+    console.log('   Add Firebase credentials to .env file to enable Google authentication');
+}
 
 // ========== Middleware Configuration ==========
 

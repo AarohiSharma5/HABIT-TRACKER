@@ -7,6 +7,11 @@
 <!-- Navigation Bar -->
 <nav class="navbar">
     <div class="nav-brand">
+        <div class="profile-icon-container" onclick="switchPage('page-profile')">
+            <div class="profile-icon" id="nav-profile-icon">
+                <span class="profile-icon-text"></span>
+            </div>
+        </div>
         <h1>📊 Habit Tracker</h1>
     </div>
     <ul class="nav-menu">
@@ -15,7 +20,7 @@
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-analytics">📈 Analytics</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-weekly-progress">📅 Weekly Progress</a></li>
         <li class="nav-item user-menu">
-            <span class="user-name">👤 <%= userName %></span>
+            <span class="user-name"><%= userName %></span>
             <a href="/logout" class="btn-logout">Logout</a>
         </li>
     </ul>
@@ -70,14 +75,104 @@
                     >
                 </div>
                 <div class="form-group">
-                    <label for="habit-frequency">How many days per week?</label>
-                    <select id="habit-frequency">
-                        <option value="7" selected>🔥 7 Days (Daily - No rest days)</option>
-                        <option value="6">💪 6 Days (1 rest day per week)</option>
-                        <option value="5">⭐ 5 Days (2 rest days per week)</option>
-                        <option value="4">🎯 4 Days (3 rest days per week)</option>
-                    </select>
-                    <small class="form-help">Choose how many days you want to maintain this habit weekly</small>
+                    <label>How many days would you like to skip per week?</label>
+                    <small class="form-help">Select one option that fits your schedule</small>
+                    <div class="skip-days-table">
+                        <label class="skip-option">
+                            <input type="radio" name="skip-days" value="0" checked>
+                            <div class="skip-option-content">
+                                <div class="skip-icon">🔥</div>
+                                <div class="skip-label">No Skip Days</div>
+                                <div class="skip-description">7 days active</div>
+                                <div class="skip-detail">Daily commitment</div>
+                            </div>
+                        </label>
+                        <label class="skip-option">
+                            <input type="radio" name="skip-days" value="1">
+                            <div class="skip-option-content">
+                                <div class="skip-icon">💪</div>
+                                <div class="skip-label">1 Skip Day</div>
+                                <div class="skip-description">6 days active</div>
+                                <div class="skip-detail">1 rest day</div>
+                            </div>
+                        </label>
+                        <label class="skip-option">
+                            <input type="radio" name="skip-days" value="2">
+                            <div class="skip-option-content">
+                                <div class="skip-icon">⭐</div>
+                                <div class="skip-label">2 Skip Days</div>
+                                <div class="skip-description">5 days active</div>
+                                <div class="skip-detail">2 rest days</div>
+                            </div>
+                        </label>
+                        <label class="skip-option">
+                            <input type="radio" name="skip-days" value="3">
+                            <div class="skip-option-content">
+                                <div class="skip-icon">🎯</div>
+                                <div class="skip-label">3 Skip Days</div>
+                                <div class="skip-description">4 days active</div>
+                                <div class="skip-detail">3 rest days</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="specific-days-group" style="display: none;">
+                    <label>Which specific days would you like to skip?</label>
+                    <small class="form-help" id="skip-days-help">Select the days you want to take as rest days</small>
+                    <div class="days-checkbox-table">
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="monday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Monday</div>
+                                <div class="day-icon">📅</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="tuesday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Tuesday</div>
+                                <div class="day-icon">📅</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="wednesday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Wednesday</div>
+                                <div class="day-icon">📅</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="thursday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Thursday</div>
+                                <div class="day-icon">📅</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="friday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Friday</div>
+                                <div class="day-icon">📅</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="saturday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Saturday</div>
+                                <div class="day-icon">🏖️</div>
+                            </div>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="skip-specific-days" value="sunday">
+                            <div class="day-checkbox-content">
+                                <div class="day-name">Sunday</div>
+                                <div class="day-icon">☀️</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="selected-days-preview" id="selected-days-preview" style="display: none;">
+                        <strong>Rest days:</strong> <span id="selected-days-list"></span>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary">Create Habit</button>
             </form>
@@ -196,6 +291,112 @@
         <section class="weekly-analysis-section">
             <div id="weekly-progress-container">
                 <p class="loading-text">Loading weekly progress...</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- PAGE 5: User Profile -->
+    <div id="page-profile" class="page">
+        <header>
+            <h1>My Profile</h1>
+            <p class="subtitle" id="profile-subtitle">View and edit your account information</p>
+        </header>
+
+        <section class="profile-section">
+            <div class="profile-container">
+                <div class="profile-loading">
+                    <p>Loading profile...</p>
+                </div>
+                
+                <div class="profile-content" style="display: none;">
+                    <!-- View Mode -->
+                    <div id="profile-view-mode">
+                        <div class="profile-header">
+                            <div class="profile-avatar-wrapper">
+                                <div class="profile-avatar" id="profile-avatar">
+                                    <span class="avatar-text"></span>
+                                </div>
+                                <button class="btn-edit-avatar" id="btn-edit-mode" onclick="enterEditMode()">
+                                    ✏️ Edit Profile
+                                </button>
+                            </div>
+                            <div class="profile-info">
+                                <h2 id="profile-name">Loading...</h2>
+                                <p class="profile-email" id="profile-email"></p>
+                                <p class="profile-about" id="profile-about"></p>
+                            </div>
+                        </div>
+
+                        <div class="profile-details">
+                            <div class="detail-card">
+                                <div class="detail-icon">🆔</div>
+                                <div class="detail-content">
+                                    <label>User ID</label>
+                                    <div class="detail-value">
+                                        <span id="profile-userId">Loading...</span>
+                                        <button class="btn-copy" onclick="copyToClipboard('profile-userId')" title="Copy User ID">
+                                            📋
+                                        </button>
+                                    </div>
+                                    <small class="detail-help">Use this ID for login</small>
+                                </div>
+                            </div>
+
+                            <div class="detail-card">
+                                <div class="detail-icon">🔐</div>
+                                <div class="detail-content">
+                                    <label>Authentication Method</label>
+                                    <div class="detail-value" id="profile-authProvider">Loading...</div>
+                                </div>
+                            </div>
+
+                            <div class="detail-card">
+                                <div class="detail-icon">📅</div>
+                                <div class="detail-content">
+                                    <label>Member Since</label>
+                                    <div class="detail-value" id="profile-createdAt">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Mode -->
+                    <div id="profile-edit-mode" style="display: none;">
+                        <form id="profile-edit-form">
+                            <div class="profile-header">
+                                <div class="profile-avatar-wrapper">
+                                    <div class="profile-avatar" id="profile-avatar-edit">
+                                        <span class="avatar-text-edit"></span>
+                                    </div>
+                                    <div class="avatar-upload">
+                                        <input type="url" id="photoURL-input" placeholder="Paste image URL (optional)" class="url-input">
+                                        <small class="form-help">Enter a direct image URL or leave blank for default icon</small>
+                                    </div>
+                                </div>
+                                <div class="profile-info">
+                                    <div class="form-group">
+                                        <label for="name-input">Display Name</label>
+                                        <input type="text" id="name-input" maxlength="100" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="about-input">About Me</label>
+                                        <textarea id="about-input" rows="4" maxlength="500" placeholder="Tell us about yourself..."></textarea>
+                                        <small class="char-counter"><span id="about-char-count">0</span>/500 characters</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="profile-actions">
+                                <button type="button" class="btn-secondary" onclick="cancelEditMode()">
+                                    ❌ Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    💾 Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </section>
     </div>

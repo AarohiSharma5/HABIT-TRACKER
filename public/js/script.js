@@ -49,10 +49,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Skip days radio button change listener
+    const skipDaysRadios = document.querySelectorAll('input[name="skip-days"]');
+    const specificDaysGroup = document.getElementById('specific-days-group');
+    skipDaysRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const skipDays = parseInt(e.target.value);
+            if (skipDays > 0 && specificDaysGroup) {
+                specificDaysGroup.style.display = 'block';
+                updateSkipDaysHelp(skipDays);
+                // Clear previous selections
+                document.querySelectorAll('input[name="skip-specific-days"]').forEach(cb => cb.checked = false);
+                updateSelectedDaysPreview();
+            } else if (specificDaysGroup) {
+                specificDaysGroup.style.display = 'none';
+            }
+        });
+    });
+
+    // Day checkboxes change listener
+    const dayCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]');
+    dayCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const skipDaysElement = document.querySelector('input[name="skip-days"]:checked');
+            const maxSkipDays = skipDaysElement ? parseInt(skipDaysElement.value) : 0;
+            const checkedCount = document.querySelectorAll('input[name="skip-specific-days"]:checked').length;
+            
+            // Limit selection to the number of skip days chosen
+            if (checkedCount > maxSkipDays) {
+                checkbox.checked = false;
+                alert(`You can only select ${maxSkipDays} day(s) to skip.`);
+            }
+            
+            updateSelectedDaysPreview();
+        });
+    });
+
     // Load initial data
     loadHabits();
     switchPage('page-add-habit'); // Show first page by default
 });
+
+/**
+ * Update the help text based on selected skip days
+ */
+function updateSkipDaysHelp(skipDays) {
+    const helpText = document.getElementById('skip-days-help');
+    if (helpText) {
+        helpText.textContent = `Select exactly ${skipDays} day(s) to skip`;
+    }
+}
+
+/**
+ * Update the preview of selected days
+ */
+function updateSelectedDaysPreview() {
+    const selectedCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]:checked');
+    const preview = document.getElementById('selected-days-preview');
+    const listSpan = document.getElementById('selected-days-list');
+    
+    if (selectedCheckboxes.length > 0) {
+        const dayNames = Array.from(selectedCheckboxes).map(cb => {
+            return cb.value.charAt(0).toUpperCase() + cb.value.slice(1);
+        });
+        listSpan.textContent = dayNames.join(', ');
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
 
 /**
  * Switch between pages
@@ -87,6 +152,8 @@ function switchPage(pageId) {
         loadAnalytics();
     } else if (pageId === 'page-weekly-progress') {
         loadWeeklyProgress();
+    } else if (pageId === 'page-profile') {
+        loadProfile();
     }
 }
 
@@ -100,7 +167,19 @@ async function addHabit(e) {
     
     const habitName = habitInput.value.trim();
     let category = habitCategoryInput.value;
-    const daysPerWeek = parseInt(document.getElementById('habit-frequency').value) || 7;
+    const skipDaysElement = document.querySelector('input[name="skip-days"]:checked');
+    const skipDays = skipDaysElement ? parseInt(skipDaysElement.value) : 0;
+    const daysPerWeek = 7 - skipDays;
+    
+    // Get selected specific days to skip
+    const selectedDays = Array.from(document.querySelectorAll('input[name="skip-specific-days"]:checked'))
+        .map(cb => cb.value);
+    
+    // Validate that the number of selected days matches skip days count
+    if (skipDays > 0 && selectedDays.length !== skipDays) {
+        alert(`Please select exactly ${skipDays} day(s) to skip.`);
+        return;
+    }
     
     // Check if custom category is selected
     if (category === 'other') {
@@ -119,14 +198,27 @@ async function addHabit(e) {
         return;
     }
     
+    console.log('Sending habit data:', { 
+        name: habitName, 
+        category, 
+        daysPerWeek,
+        skipDays: selectedDays 
+    });
+    
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: habitName, category, daysPerWeek })
+            body: JSON.stringify({ 
+                name: habitName, 
+                category, 
+                daysPerWeek,
+                skipDays: selectedDays // Send array of day names to skip
+            })
         });
         
         const data = await response.json();
+        console.log('Server response:', data);
         
         if (data.success) {
             habitInput.value = '';
@@ -134,16 +226,24 @@ async function addHabit(e) {
             if (customCategoryInput) customCategoryInput.value = '';
             document.getElementById('custom-category-group').style.display = 'none';
             habitCategoryInput.value = 'health'; // Reset to default
-            document.getElementById('habit-frequency').value = '7'; // Reset to 7 days
+            // Reset skip days selection to 0
+            const defaultSkipRadio = document.querySelector('input[name="skip-days"][value="0"]');
+            if (defaultSkipRadio) defaultSkipRadio.checked = true;
+            // Hide specific days group and clear selections
+            const specificDaysGroup = document.getElementById('specific-days-group');
+            if (specificDaysGroup) specificDaysGroup.style.display = 'none';
+            document.querySelectorAll('input[name="skip-specific-days"]').forEach(cb => cb.checked = false);
+            updateSelectedDaysPreview();
             await loadHabits();
             updateQuickStats();
             showMessage('Habit added successfully! 🎉', 'success');
         } else {
+            console.error('Failed to create habit:', data);
             alert(data.message || 'Failed to add habit');
         }
     } catch (error) {
         console.error('Error adding habit:', error);
-        alert('Failed to add habit. Please try again.');
+        alert(`Failed to add habit: ${error.message || 'Please try again.'}`);
     }
 }
 
@@ -828,6 +928,255 @@ function renderWeeklyChart(habit) {
 }
 
 // ========== Utility Functions ==========
+
+// Store current user data
+let currentUserData = null;
+
+/**
+ * Load and display user profile
+ */
+async function loadProfile() {
+    const loadingDiv = document.querySelector('.profile-loading');
+    const contentDiv = document.querySelector('.profile-content');
+    
+    try {
+        const response = await fetch('/auth/profile');
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+            currentUserData = data.user;
+            updateProfileDisplay(data.user);
+            updateNavProfileIcon(data.user);
+            
+            // Show content, hide loading
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
+        } else {
+            throw new Error('Failed to load profile');
+        }
+    } catch (error) {
+        console.error('Profile load error:', error);
+        loadingDiv.innerHTML = '<p class="error-text">❌ Failed to load profile. Please try again.</p>';
+    }
+}
+
+/**
+ * Update profile display with user data
+ */
+function updateProfileDisplay(user) {
+    // Update avatar
+    const avatarDiv = document.getElementById('profile-avatar');
+    const avatarText = avatarDiv.querySelector('.avatar-text');
+    
+    if (user.photoURL) {
+        avatarDiv.style.backgroundImage = `url(${user.photoURL})`;
+        avatarDiv.style.backgroundSize = 'cover';
+        avatarDiv.style.backgroundPosition = 'center';
+        avatarText.textContent = '';
+    } else {
+        // Show default user icon
+        avatarDiv.style.backgroundImage = 'none';
+        avatarDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        avatarText.textContent = '👤';
+        avatarText.style.fontSize = '4rem';
+    }
+    
+    // Update profile info
+    document.getElementById('profile-name').textContent = user.name;
+    document.getElementById('profile-email').textContent = user.email || 'No email provided';
+    document.getElementById('profile-userId').textContent = user.userId;
+    
+    // Update about section
+    const aboutDiv = document.getElementById('profile-about');
+    if (user.about && user.about.trim()) {
+        aboutDiv.textContent = user.about;
+        aboutDiv.style.display = 'block';
+    } else {
+        aboutDiv.textContent = 'No bio added yet. Click "Edit Profile" to add one!';
+        aboutDiv.style.fontStyle = 'italic';
+        aboutDiv.style.color = '#94a3b8';
+    }
+    
+    // Update auth provider
+    const authProviderDiv = document.getElementById('profile-authProvider');
+    if (user.authProvider === 'google') {
+        authProviderDiv.innerHTML = '<span class="badge-google">🔐 Google Sign-In</span>';
+    } else {
+        authProviderDiv.innerHTML = '<span class="badge-local">🔑 Password</span>';
+    }
+    
+    // Update member since
+    const createdDate = new Date(user.createdAt);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('profile-createdAt').textContent = createdDate.toLocaleDateString('en-US', options);
+}
+
+/**
+ * Update navigation profile icon
+ */
+function updateNavProfileIcon(user) {
+    const navIcon = document.getElementById('nav-profile-icon');
+    const iconText = navIcon.querySelector('.profile-icon-text');
+    
+    if (user.photoURL) {
+        navIcon.style.backgroundImage = `url(${user.photoURL})`;
+        navIcon.style.backgroundSize = 'cover';
+        navIcon.style.backgroundPosition = 'center';
+        navIcon.style.background = '';
+        iconText.textContent = '';
+    } else {
+        // Show default user icon
+        navIcon.style.backgroundImage = 'none';
+        navIcon.style.background = 'linear-gradient(135deg, #ffffff, #f8fafc)';
+        iconText.textContent = '👤';
+        iconText.style.fontSize = '1.8rem';
+        iconText.style.webkitBackgroundClip = 'unset';
+        iconText.style.webkitTextFillColor = 'unset';
+        iconText.style.filter = 'grayscale(20%)';
+    }
+}
+
+/**
+ * Enter edit mode
+ */
+function enterEditMode() {
+    if (!currentUserData) return;
+    
+    document.getElementById('profile-view-mode').style.display = 'none';
+    document.getElementById('profile-edit-mode').style.display = 'block';
+    
+    // Populate edit form
+    document.getElementById('name-input').value = currentUserData.name;
+    document.getElementById('photoURL-input').value = currentUserData.photoURL || '';
+    document.getElementById('about-input').value = currentUserData.about || '';
+    
+    // Update avatar preview
+    const avatarEditDiv = document.getElementById('profile-avatar-edit');
+    const avatarEditText = avatarEditDiv.querySelector('.avatar-text-edit');
+    
+    if (currentUserData.photoURL) {
+        avatarEditDiv.style.backgroundImage = `url(${currentUserData.photoURL})`;
+        avatarEditDiv.style.backgroundSize = 'cover';
+        avatarEditDiv.style.backgroundPosition = 'center';
+        avatarEditDiv.style.background = '';
+        avatarEditText.textContent = '';
+    } else {
+        // Show default user icon
+        avatarEditDiv.style.backgroundImage = 'none';
+        avatarEditDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        avatarEditText.textContent = '👤';
+        avatarEditText.style.fontSize = '4rem';
+    }
+    
+    updateCharCount();
+    
+    // Add event listeners
+    document.getElementById('about-input').addEventListener('input', updateCharCount);
+    document.getElementById('photoURL-input').addEventListener('input', previewPhotoURL);
+    document.getElementById('profile-edit-form').addEventListener('submit', saveProfile);
+}
+
+/**
+ * Cancel edit mode
+ */
+function cancelEditMode() {
+    document.getElementById('profile-edit-mode').style.display = 'none';
+    document.getElementById('profile-view-mode').style.display = 'block';
+}
+
+/**
+ * Update character count
+ */
+function updateCharCount() {
+    const aboutInput = document.getElementById('about-input');
+    const charCount = document.getElementById('about-char-count');
+    charCount.textContent = aboutInput.value.length;
+}
+
+/**
+ * Preview photo URL
+ */
+function previewPhotoURL() {
+    const photoURL = document.getElementById('photoURL-input').value.trim();
+    const avatarEditDiv = document.getElementById('profile-avatar-edit');
+    const avatarEditText = avatarEditDiv.querySelector('.avatar-text-edit');
+    
+    if (photoURL) {
+        avatarEditDiv.style.backgroundImage = `url(${photoURL})`;
+        avatarEditDiv.style.backgroundSize = 'cover';
+        avatarEditDiv.style.backgroundPosition = 'center';
+        avatarEditDiv.style.background = '';
+        avatarEditText.textContent = '';
+    } else {
+        // Show default user icon
+        avatarEditDiv.style.backgroundImage = 'none';
+        avatarEditDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        avatarEditText.textContent = '👤';
+        avatarEditText.style.fontSize = '4rem';
+    }
+}
+
+/**
+ * Save profile changes
+ */
+async function saveProfile(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('name-input').value.trim();
+    const photoURL = document.getElementById('photoURL-input').value.trim();
+    const about = document.getElementById('about-input').value.trim();
+    
+    if (!name) {
+        alert('Name is required');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, photoURL, about })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentUserData = data.user;
+            updateProfileDisplay(data.user);
+            updateNavProfileIcon(data.user);
+            cancelEditMode();
+            alert('✅ Profile updated successfully!');
+        } else {
+            alert('❌ ' + (data.message || 'Failed to update profile'));
+        }
+    } catch (error) {
+        console.error('Profile update error:', error);
+        alert('❌ Failed to update profile. Please try again.');
+    }
+}
+
+/**
+ * Copy text to clipboard
+ */
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        // Show temporary success message
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+}
 
 /**
  * Show message to user

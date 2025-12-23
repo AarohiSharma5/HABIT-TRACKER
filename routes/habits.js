@@ -209,7 +209,7 @@ router.get('/category/:category', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const userId = req.session.userId;
-        const { name, description, category, frequency, daysPerWeek } = req.body;
+        const { name, description, category, frequency, daysPerWeek, skipDays } = req.body;
         
         // Validate required fields
         if (!name || name.trim() === '') {
@@ -228,6 +228,30 @@ router.post('/', async (req, res) => {
             });
         }
         
+        // Validate skipDays array if provided
+        const validSkipDays = Array.isArray(skipDays) ? skipDays : [];
+        const expectedSkipDays = 7 - validDaysPerWeek;
+        
+        // Only validate count if there are skip days expected
+        if (expectedSkipDays > 0 && validSkipDays.length !== expectedSkipDays) {
+            console.error('Skip days validation failed:', {
+                validSkipDays,
+                expectedSkipDays,
+                validDaysPerWeek
+            });
+            return res.status(400).json({
+                success: false,
+                message: `Please select exactly ${expectedSkipDays} day(s) to skip. You selected ${validSkipDays.length}.`
+            });
+        }
+        
+        console.log('Creating habit with:', {
+            name: name.trim(),
+            category: category?.trim() || 'general',
+            daysPerWeek: validDaysPerWeek,
+            skipDays: validSkipDays
+        });
+        
         // Create new habit
         const habit = new Habit({
             userId,
@@ -235,7 +259,8 @@ router.post('/', async (req, res) => {
             description: description?.trim() || '',
             category: category?.trim() || 'general',
             frequency: frequency || 'daily',
-            daysPerWeek: validDaysPerWeek
+            daysPerWeek: validDaysPerWeek,
+            skipDays: validSkipDays
         });
         
         await habit.save();

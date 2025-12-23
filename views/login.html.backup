@@ -279,7 +279,14 @@
                         placeholder="Enter your password"
                         required
                         autocomplete="current-password"
-                    >
+     !-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script src="/js/firebase-config.js"></script>
+
+                        
                     <button type="button" class="toggle-password" id="togglePassword" aria-label="Toggle password visibility">
                         👁️
                     </button>
@@ -290,20 +297,24 @@
         </form>
 
         <div class="switch-auth">
-            Don't have an account? <a href="/signup">Sign Up</a>
+            Don't have an account? <a href="/signup">Sign up</a>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
-    <!-- Firebase Configuration -->
-    <script src="/js/firebase-config.js"></script>
-
     <script>
+        const loginForm = document.getElementById('login-form');
         const alertDiv = document.getElementById('alert');
-        
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('togglePassword');
+
+        // Toggle password visibility
+        togglePasswordBtn.addEventListener('click', function() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            // Change icon based on visibility
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
         function showAlert(message, type = 'error') {
             alertDiv.textContent = message;
             alertDiv.className = `alert alert-${type}`;
@@ -313,25 +324,6 @@
             }, 3000);
         }
 
-        // Check for session expired message
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('error') === 'session_expired') {
-            showAlert('Your session has expired. Please login again.');
-        }
-
-        // Password visibility toggle
-        const togglePassword = document.getElementById('togglePassword');
-        const passwordInput = document.getElementById('password');
-
-        togglePassword.addEventListener('click', () => {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            togglePassword.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
-        });
-
-        // Traditional Login Form Handler
-        const loginForm = document.getElementById('login-form');
-        
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -345,28 +337,6 @@
 
             try {
                 const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ userId, password })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                } else {
-                    showAlert(data.message || 'Login failed');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showAlert('An error occurred. Please try again.');
-            }
-        });
 
         // Google Sign-in Handler
         const googleSigninBtn = document.getElementById('google-signin-btn');
@@ -415,6 +385,28 @@
                     </svg>
                     Sign in with Google
                 `;
+            }
+        });
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('An error occurred. Please try again.');
             }
         });
     </script>

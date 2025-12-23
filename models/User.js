@@ -9,7 +9,10 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
     userId: {
         type: String,
-        required: [true, 'User ID is required'],
+        required: function() {
+            // userId is auto-generated for Google users, required for local users
+            return !this.googleId;
+        },
         unique: true,
         trim: true,
         lowercase: true,
@@ -22,12 +25,33 @@ const userSchema = new mongoose.Schema({
         trim: true,
         maxlength: [100, 'Name cannot exceed 100 characters']
     },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        sparse: true, // Allows multiple null values but unique non-null values
+        validate: {
+            validator: function(email) {
+                if (!email) return true; // Email is optional
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            },
+            message: 'Invalid email format'
+        }
+    },
     password: {
         type: String,
-        required: [true, 'Password is required'],
+        required: function() {
+            // Password is only required if not using Google auth
+            return !this.googleId;
+        },
         minlength: [8, 'Password must be at least 8 characters'],
         validate: {
             validator: function(password) {
+                // Skip validation if using Google auth
+                if (this.googleId) return true;
+                if (!password) return false;
+                
                 // Password must contain:
                 // - At least 8 characters
                 // - At least one uppercase letter
@@ -39,6 +63,27 @@ const userSchema = new mongoose.Schema({
             },
             message: 'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)'
         }
+    },
+    // Google authentication fields
+    googleId: {
+        type: String,
+        sparse: true, // Allows null but unique non-null values
+        unique: true
+    },
+    photoURL: {
+        type: String,
+        trim: true
+    },
+    about: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'About section cannot exceed 500 characters'],
+        default: ''
+    },
+    authProvider: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local'
     }
 }, {
     timestamps: true
@@ -76,7 +121,8 @@ userSchema.statics.validatePasswordComplexity = function(password) {
  * Hash password before saving
  */
 userSchema.pre('save', async function() {
-    if (!this.isModified('password')) {
+    // Skip hashing if using Google auth or password unchanged
+    if (!this.isModified('password') || this.googleId) {
         return;
     }
     

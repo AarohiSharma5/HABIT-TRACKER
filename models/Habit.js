@@ -126,6 +126,21 @@ const habitSchema = new mongoose.Schema({
         default: 7,
         min: [1, 'Days per week must be at least 1'],
         max: [7, 'Days per week cannot exceed 7']
+    },
+    
+    // Specific days of the week to skip (rest days)
+    // PERSISTENCE: Array of day names that user wants to skip
+    // Example: ['saturday', 'sunday'] for weekend rest
+    skipDays: {
+        type: [String],
+        default: [],
+        validate: {
+            validator: function(days) {
+                const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                return days.every(day => validDays.includes(day.toLowerCase()));
+            },
+            message: 'Invalid day name in skipDays array'
+        }
     }
 }, {
     // ========== AUTOMATIC TIMESTAMPS (MongoDB-managed) ==========
