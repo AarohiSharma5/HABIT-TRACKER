@@ -948,6 +948,13 @@ async function loadProfile() {
             updateProfileDisplay(data.user);
             updateNavProfileIcon(data.user);
             
+            // Load profile statistics
+            await loadProfileStats();
+            
+            // Update badges and achievements
+            updateBadges();
+            updateAchievements();
+            
             // Show content, hide loading
             loadingDiv.style.display = 'none';
             contentDiv.style.display = 'block';
@@ -958,6 +965,369 @@ async function loadProfile() {
         console.error('Profile load error:', error);
         loadingDiv.innerHTML = '<p class="error-text">❌ Failed to load profile. Please try again.</p>';
     }
+}
+
+/**
+ * Load profile statistics
+ */
+async function loadProfileStats() {
+    try {
+        // Get all habits
+        await loadHabits();
+        
+        // Calculate statistics
+        const totalHabits = habits.length;
+        
+        // Count completed today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let completedToday = 0;
+        let currentStreak = 0;
+        let bestStreak = 0;
+        
+        habits.forEach(habit => {
+            // Check if completed today
+            const todayEntry = habit.completionHistory?.find(entry => {
+                const d = new Date(entry.date);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === today.getTime();
+            });
+            
+            if (todayEntry && todayEntry.status === 'completed') {
+                completedToday++;
+            }
+            
+            // Track best streak
+            if (habit.streak > bestStreak) {
+                bestStreak = habit.streak;
+            }
+            
+            // Calculate average current streak
+            currentStreak += habit.streak;
+        });
+        
+        currentStreak = totalHabits > 0 ? Math.round(currentStreak / totalHabits) : 0;
+        
+        // Calculate weekly completion rate
+        const weeklyCompletion = await calculateWeeklyCompletion();
+        
+        // Calculate days since joining
+        const daysActive = currentUserData ? 
+            Math.floor((new Date() - new Date(currentUserData.createdAt)) / (1000 * 60 * 60 * 24)) : 0;
+        
+        // Update stats display
+        document.getElementById('stat-total-habits').textContent = totalHabits;
+        document.getElementById('stat-completed-today').textContent = completedToday;
+        document.getElementById('stat-current-streak').textContent = currentStreak;
+        document.getElementById('stat-best-streak').textContent = bestStreak;
+        document.getElementById('stat-weekly-completion').textContent = weeklyCompletion + '%';
+        document.getElementById('stat-days-active').textContent = daysActive;
+        
+    } catch (error) {
+        console.error('Error loading profile stats:', error);
+    }
+}
+
+/**
+ * Calculate weekly completion percentage
+ */
+async function calculateWeeklyCompletion() {
+    if (habits.length === 0) return 0;
+    
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+    
+    let totalRequired = 0;
+    let totalCompleted = 0;
+    
+    habits.forEach(habit => {
+        // Count days in this week
+        for (let i = 0; i < 7; i++) {
+            const checkDate = new Date(weekStart);
+            checkDate.setDate(weekStart.getDate() + i);
+            
+            // Only count up to today
+            if (checkDate > today) break;
+            
+            // Check if this day should be tracked (not a skip day)
+            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
+            const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
+            
+            if (!shouldSkip) {
+                totalRequired++;
+                
+                // Check if completed
+                const entry = habit.completionHistory?.find(e => {
+                    const d = new Date(e.date);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() === checkDate.getTime();
+                });
+                
+                if (entry && entry.status === 'completed') {
+                    totalCompleted++;
+                }
+            }
+        }
+    });
+    
+    return totalRequired > 0 ? Math.round((totalCompleted / totalRequired) * 100) : 0;
+}
+
+/**
+ * Initialize and display badge system
+ */
+function updateBadges() {
+    const badgesMilestones = [
+        { days: 7, icon: '🌟', name: 'Week Warrior', color: 'badge-7' },
+        { days: 21, icon: '💎', name: 'Habit Builder', color: 'badge-21' },
+        { days: 30, icon: '🎯', name: 'Month Master', color: 'badge-30' },
+        { days: 50, icon: '🔥', name: 'Streak Legend', color: 'badge-50' },
+        { days: 100, icon: '👑', name: 'Century Champion', color: 'badge-100' }
+    ];
+    
+    // Get best streak from habits
+    let bestStreak = 0;
+    habits.forEach(habit => {
+        if (habit.streak > bestStreak) {
+            bestStreak = habit.streak;
+        }
+    });
+    
+    const badgesContainer = document.getElementById('badges-container');
+    badgesContainer.innerHTML = '';
+    
+    // Check for newly unlocked badges
+    const previousBadges = JSON.parse(localStorage.getItem('unlockedBadges') || '[]');
+    const currentUnlocked = [];
+    
+    badgesMilestones.forEach(badge => {
+        const isUnlocked = bestStreak >= badge.days;
+        const wasJustUnlocked = isUnlocked && !previousBadges.includes(badge.days);
+        
+        if (isUnlocked) {
+            currentUnlocked.push(badge.days);
+        }
+        
+        const badgeItem = document.createElement('div');
+        badgeItem.className = `badge-item ${isUnlocked ? 'badge-unlocked' : 'badge-locked'} ${badge.color} ${wasJustUnlocked ? 'badge-just-unlocked' : ''}`;
+        
+        badgeItem.innerHTML = `
+            <div class="badge-circle">
+                <div class="badge-icon">${badge.icon}</div>
+                ${!isUnlocked ? '<div class="badge-lock">🔒</div>' : ''}
+            </div>
+            <div class="badge-info">
+                <div class="badge-name">${badge.name}</div>
+                <div class="badge-days">${badge.days} Day${badge.days > 1 ? 's' : ''}</div>
+                <div class="badge-status">
+                    ${isUnlocked ? '✓ Earned' : 'Locked'}
+                </div>
+            </div>
+        `;
+        
+        // Add tooltip
+        if (isUnlocked) {
+            badgeItem.title = `🎉 Earned on reaching ${badge.days}-day streak!`;
+        } else {
+            const daysNeeded = badge.days - bestStreak;
+            badgeItem.title = `${daysNeeded} more day${daysNeeded > 1 ? 's' : ''} to unlock!`;
+        }
+        
+        badgesContainer.appendChild(badgeItem);
+        
+        // Show notification for newly unlocked badge
+        if (wasJustUnlocked) {
+            setTimeout(() => {
+                showBadgeUnlockNotification(badge);
+            }, 500);
+        }
+    });
+    
+    // Save current unlocked badges
+    localStorage.setItem('unlockedBadges', JSON.stringify(currentUnlocked));
+}
+
+/**
+ * Show badge unlock notification
+ */
+function showBadgeUnlockNotification(badge) {
+    // Create notification overlay
+    const notification = document.createElement('div');
+    notification.className = 'badge-unlock-notification';
+    notification.innerHTML = `
+        <div class="badge-unlock-content">
+            <div class="badge-unlock-icon">${badge.icon}</div>
+            <h2 class="badge-unlock-title">🎉 Badge Unlocked!</h2>
+            <p class="badge-unlock-name">${badge.name}</p>
+            <p class="badge-unlock-desc">${badge.days}-day streak achieved!</p>
+            <button class="btn-badge-close" onclick="this.parentElement.parentElement.remove()">Continue</button>
+        </div>
+    `;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease-out;
+        backdrop-filter: blur(10px);
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+/**
+ * Update achievements display
+ */
+function updateAchievements() {
+    const achievements = [
+        {
+            id: 'first-habit',
+            icon: '🌱',
+            name: 'First Habit',
+            desc: 'Create your first habit',
+            unlocked: habits.length >= 1
+        },
+        {
+            id: 'streak-master',
+            icon: '⚡',
+            name: 'Streak Master',
+            desc: 'Maintain a 7-day streak',
+            unlocked: habits.some(h => h.streak >= 7)
+        },
+        {
+            id: 'dedicated',
+            icon: '💪',
+            name: 'Dedicated',
+            desc: 'Complete 30 habits',
+            unlocked: getTotalCompletions() >= 30
+        },
+        {
+            id: 'perfect-week',
+            icon: '🎯',
+            name: 'Perfect Week',
+            desc: 'Complete all habits for a week',
+            unlocked: checkPerfectWeek()
+        },
+        {
+            id: 'on-fire',
+            icon: '🔥',
+            name: 'On Fire!',
+            desc: '30-day streak achieved',
+            unlocked: habits.some(h => h.streak >= 30)
+        },
+        {
+            id: 'habit-king',
+            icon: '👑',
+            name: 'Habit King',
+            desc: 'Track 10+ habits',
+            unlocked: habits.length >= 10
+        }
+    ];
+    
+    const achievementsGrid = document.getElementById('achievements-grid');
+    achievementsGrid.innerHTML = '';
+    
+    achievements.forEach(achievement => {
+        const card = document.createElement('div');
+        card.className = `achievement-card ${achievement.unlocked ? 'achievement-unlocked' : 'achievement-locked'}`;
+        card.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-name">${achievement.name}</div>
+            <div class="achievement-desc">${achievement.desc}</div>
+        `;
+        
+        if (achievement.unlocked) {
+            card.title = 'Achievement Unlocked! 🎉';
+        } else {
+            card.title = 'Keep going to unlock this achievement!';
+        }
+        
+        achievementsGrid.appendChild(card);
+    });
+}
+
+/**
+ * Get total habit completions
+ */
+function getTotalCompletions() {
+    let total = 0;
+    habits.forEach(habit => {
+        if (habit.completionHistory) {
+            total += habit.completionHistory.filter(e => e.status === 'completed').length;
+        }
+    });
+    return total;
+}
+
+/**
+ * Check if user has completed a perfect week
+ */
+function checkPerfectWeek() {
+    if (habits.length === 0) return false;
+    
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+    
+    // Check last 4 weeks for a perfect week
+    for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
+        const checkWeekStart = new Date(weekStart);
+        checkWeekStart.setDate(weekStart.getDate() - (weekOffset * 7));
+        
+        let isPerfectWeek = true;
+        
+        // Check each habit
+        for (const habit of habits) {
+            // Check each day of the week
+            for (let i = 0; i < 7; i++) {
+                const checkDate = new Date(checkWeekStart);
+                checkDate.setDate(checkWeekStart.getDate() + i);
+                
+                // Skip if future date
+                if (checkDate > today) continue;
+                
+                // Check if this day should be tracked
+                const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
+                const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
+                
+                if (!shouldSkip) {
+                    // Check if completed
+                    const entry = habit.completionHistory?.find(e => {
+                        const d = new Date(e.date);
+                        d.setHours(0, 0, 0, 0);
+                        return d.getTime() === checkDate.getTime();
+                    });
+                    
+                    if (!entry || entry.status !== 'completed') {
+                        isPerfectWeek = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (!isPerfectWeek) break;
+        }
+        
+        if (isPerfectWeek) return true;
+    }
+    
+    return false;
 }
 
 /**
@@ -1146,8 +1516,13 @@ async function saveProfile(e) {
             currentUserData = data.user;
             updateProfileDisplay(data.user);
             updateNavProfileIcon(data.user);
+            
+            // Reload stats and achievements
+            await loadProfileStats();
+            updateAchievements();
+            
             cancelEditMode();
-            alert('✅ Profile updated successfully!');
+            showSuccessMessage('✅ Profile updated successfully!');
         } else {
             alert('❌ ' + (data.message || 'Failed to update profile'));
         }
@@ -1155,6 +1530,36 @@ async function saveProfile(e) {
         console.error('Profile update error:', error);
         alert('❌ Failed to update profile. Please try again.');
     }
+}
+
+/**
+ * Show success message
+ */
+function showSuccessMessage(message) {
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #34D399, #059669);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.4);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 /**

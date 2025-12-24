@@ -327,6 +327,64 @@
                             </div>
                         </div>
 
+                        <!-- Profile Statistics -->
+                        <div class="profile-stats-grid">
+                            <div class="stat-card stat-card-primary">
+                                <div class="stat-icon">📝</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Total Habits</div>
+                                    <div class="stat-value" id="stat-total-habits">0</div>
+                                    <div class="stat-subtext">Active habits tracked</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card stat-card-success">
+                                <div class="stat-icon">✅</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Completed Today</div>
+                                    <div class="stat-value" id="stat-completed-today">0</div>
+                                    <div class="stat-subtext">habits done today</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card stat-card-fire">
+                                <div class="stat-icon">🔥</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Current Streak</div>
+                                    <div class="stat-value" id="stat-current-streak">0</div>
+                                    <div class="stat-subtext">days in a row</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card stat-card-trophy">
+                                <div class="stat-icon">🏆</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Best Streak</div>
+                                    <div class="stat-value" id="stat-best-streak">0</div>
+                                    <div class="stat-subtext">longest streak</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card stat-card-info">
+                                <div class="stat-icon">📊</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Weekly Completion</div>
+                                    <div class="stat-value" id="stat-weekly-completion">0%</div>
+                                    <div class="stat-subtext">this week's progress</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card stat-card-warning">
+                                <div class="stat-icon">⏰</div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Days Active</div>
+                                    <div class="stat-value" id="stat-days-active">0</div>
+                                    <div class="stat-subtext">since joining</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Details -->
                         <div class="profile-details">
                             <div class="detail-card">
                                 <div class="detail-icon">🆔</div>
@@ -355,6 +413,52 @@
                                 <div class="detail-content">
                                     <label>Member Since</label>
                                     <div class="detail-value" id="profile-createdAt">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Badge Collection Section -->
+                        <div class="badges-section">
+                            <h3 class="section-title">🏆 Streak Badges</h3>
+                            <p class="section-subtitle">Earn badges by maintaining consistent habit streaks</p>
+                            <div class="badges-container" id="badges-container">
+                                <!-- Badges will be dynamically generated -->
+                            </div>
+                        </div>
+
+                        <!-- Achievements Section -->
+                        <div class="achievements-section">
+                            <h3 class="section-title">🏅 Achievements</h3>
+                            <div class="achievements-grid" id="achievements-grid">
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">🌱</div>
+                                    <div class="achievement-name">First Habit</div>
+                                    <div class="achievement-desc">Create your first habit</div>
+                                </div>
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">⚡</div>
+                                    <div class="achievement-name">Streak Master</div>
+                                    <div class="achievement-desc">Maintain a 7-day streak</div>
+                                </div>
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">💪</div>
+                                    <div class="achievement-name">Dedicated</div>
+                                    <div class="achievement-desc">Complete 30 habits</div>
+                                </div>
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">🎯</div>
+                                    <div class="achievement-name">Perfect Week</div>
+                                    <div class="achievement-desc">Complete all habits for a week</div>
+                                </div>
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">🔥</div>
+                                    <div class="achievement-name">On Fire!</div>
+                                    <div class="achievement-desc">30-day streak achieved</div>
+                                </div>
+                                <div class="achievement-card achievement-locked">
+                                    <div class="achievement-icon">👑</div>
+                                    <div class="achievement-name">Habit King</div>
+                                    <div class="achievement-desc">Track 10+ habits</div>
                                 </div>
                             </div>
                         </div>
