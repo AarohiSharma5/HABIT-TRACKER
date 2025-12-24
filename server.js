@@ -54,12 +54,13 @@ app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Session configuration with MongoDB store
+// Using the existing mongoose connection instead of creating a new one
 app.use(session({
     secret: process.env.SESSION_SECRET || 'habit-tracker-secret',
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
+        client: mongoose.connection.getClient(),
         touchAfter: 24 * 3600 // Update session once per 24 hours unless changed
     }),
     cookie: {
@@ -136,5 +137,9 @@ app.listen(PORT, () => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-    console.error('❌ Unhandled Promise Rejection:', err);
+    console.error('❌ Unhandled Promise Rejection:', err.message);
+    // Log stack trace only in development
+    if (process.env.NODE_ENV === 'development') {
+        console.error(err.stack);
+    }
 });

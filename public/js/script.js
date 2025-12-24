@@ -7,6 +7,7 @@
 let habits = [];
 let dailyChart = null;
 let categoryChart = null;
+let weeklyOverviewChart = null;
 const API_URL = '/api/habits';
 
 // ========== Motivational Messages ==========
@@ -684,9 +685,177 @@ async function loadAnalytics() {
         if (data.success) {
             displayDailyAnalytics(data.data);
         }
+        
+        // Load weekly overview chart
+        await renderWeeklyOverviewChart();
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
+}
+
+/**
+ * Render weekly overview chart - all habits combined
+ */
+async function renderWeeklyOverviewChart() {
+    const ctx = document.getElementById('weeklyOverviewChart');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (weeklyOverviewChart) {
+        weeklyOverviewChart.destroy();
+    }
+    
+    // Get current week's data
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const completedData = [];
+    const skippedData = [];
+    const missedData = [];
+    
+    // Aggregate data for each day of the week
+    for (let i = 0; i < 7; i++) {
+        const checkDate = new Date(weekStart);
+        checkDate.setDate(weekStart.getDate() + i);
+        
+        // Don't count future days
+        if (checkDate > today) {
+            completedData.push(0);
+            skippedData.push(0);
+            missedData.push(0);
+            continue;
+        }
+        
+        let dayCompleted = 0;
+        let daySkipped = 0;
+        let dayMissed = 0;
+        
+        habits.forEach(habit => {
+            // Check if this day should be tracked (not a skip day)
+            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
+            const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
+            
+            if (!shouldSkip) {
+                // Find entry for this date
+                const entry = habit.completionHistory?.find(e => {
+                    const d = new Date(e.date);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() === checkDate.getTime();
+                });
+                
+                if (entry) {
+                    if (entry.status === 'completed') {
+                        dayCompleted++;
+                    } else if (entry.status === 'skipped') {
+                        daySkipped++;
+                    } else {
+                        dayMissed++;
+                    }
+                } else {
+                    dayMissed++;
+                }
+            }
+        });
+        
+        completedData.push(dayCompleted);
+        skippedData.push(daySkipped);
+        missedData.push(dayMissed);
+    }
+    
+    weeklyOverviewChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dayLabels,
+            datasets: [
+                {
+                    label: 'Completed',
+                    data: completedData,
+                    backgroundColor: 'rgba(74, 222, 128, 0.8)',
+                    borderColor: 'rgb(34, 197, 94)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                },
+                {
+                    label: 'Skipped',
+                    data: skippedData,
+                    backgroundColor: 'rgba(251, 191, 36, 0.8)',
+                    borderColor: 'rgb(245, 158, 11)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                },
+                {
+                    label: 'Missed',
+                    data: missedData,
+                    backgroundColor: 'rgba(252, 165, 165, 0.8)',
+                    borderColor: 'rgb(239, 68, 68)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Number of Habits'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        footer: function(tooltipItems) {
+                            let total = 0;
+                            tooltipItems.forEach(item => {
+                                total += item.parsed.y;
+                            });
+                            return 'Total: ' + total + ' habits';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
 }
 
 /**
