@@ -9,6 +9,16 @@ node_modules/
 # Firebase configuration (contains API keys)
 public/js/firebase-config.js
 
+# Firebase service account JSON files
+*.json
+!package.json
+!package-lock.json
+
+# Documentation with sensitive data
+GOOGLE_OAUTH_SETUP.md
+GOOGLE_AUTH*.md
+SECURITY_ARCHITECTURE.md
+
 # Logs
 logs
 *.log

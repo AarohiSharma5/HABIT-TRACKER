@@ -170,19 +170,23 @@ router.post('/google',
     preventDuplicateSignIn, 
     async (req, res) => {
     try {
+        console.log('📝 Google auth request received from IP:', req.ip);
         const { idToken } = req.body;
         
         if (!idToken) {
+            console.log('❌ No idToken provided');
             return res.status(400).json({
                 success: false,
                 message: 'Firebase ID token is required'
             });
         }
         
+        console.log('🔐 Verifying Firebase ID token...');
         // Verify Firebase ID token with enhanced security
         const verificationResult = await verifyIdToken(idToken);
         
         if (!verificationResult.success) {
+            console.log('❌ Token verification failed:', verificationResult.error, 'Code:', verificationResult.code);
             return res.status(401).json({
                 success: false,
                 message: verificationResult.error || 'Invalid Firebase token',
@@ -190,7 +194,9 @@ router.post('/google',
             });
         }
         
+        console.log('✅ Token verified successfully');
         const firebaseUser = verificationResult.user;
+        console.log('👤 Firebase user:', firebaseUser.email, 'UID:', firebaseUser.uid);
         
         // Additional security: Verify email is present
         if (!firebaseUser.email) {
@@ -218,14 +224,25 @@ router.post('/google',
             if (firebaseUser.email) {
                 const existingUser = await User.findOne({ email: firebaseUser.email });
                 if (existingUser) {
-                    return res.status(400).json({
-                        success: false,
-                        message: existingUser.authProvider === 'local' 
-                            ? 'This email is already registered with password login. Please use traditional login.'
-                            : 'This Google account is already registered. Please try signing in.'
-                    });
+                    // If user exists with Google auth but different googleId, update it
+                    if (existingUser.authProvider === 'google') {
+                        console.log('⚠️ Updating googleId for existing Google user:', existingUser.email);
+                        existingUser.googleId = firebaseUser.uid;
+                        await existingUser.save();
+                        user = existingUser;
+                    } else {
+                        // User registered with password, not Google
+                        return res.status(400).json({
+                            success: false,
+                            message: 'This email is already registered with password login. Please use traditional login.'
+                        });
+                    }
                 }
             }
+        }
+        
+        // If user still not found, create new account
+        if (!user) {
             
             // Generate unique user ID for Google users
             let userId;
@@ -287,8 +304,10 @@ router.post('/google',
                 photoURL: user.photoURL
             }
         });
+        console.log('✅ Google authentication successful for:', user.email);
     } catch (error) {
-        console.error('Google auth error:', error);
+        console.error('❌ Google auth error:', error.message);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Failed to authenticate with Google',
