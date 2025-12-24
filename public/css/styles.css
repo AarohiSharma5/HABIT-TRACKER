@@ -2793,6 +2793,36 @@ footer {
     }
 }
 
+/* Motivational Toast Notifications */
+.motivational-toast {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.motivational-toast:hover {
+    transform: translateY(-4px) scale(1.02);
+}
+
+.toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast-message {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.toast-extra {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    font-weight: 500;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 @media (max-width: 768px) {
     .profile-header {
         flex-direction: column;
@@ -2868,5 +2898,22 @@ footer {
 
     .badge-icon {
         font-size: 2.8rem;
+    }
+
+    /* Motivational toast mobile */
+    .motivational-toast {
+        right: 10px !important;
+        left: 10px !important;
+        max-width: calc(100% - 20px) !important;
+        top: 70px !important;
+        font-size: 1rem !important;
+    }
+
+    .toast-message {
+        font-size: 1rem !important;
+    }
+
+    .toast-extra {
+        font-size: 0.9rem !important;
     }
 }

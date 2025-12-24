@@ -9,6 +9,94 @@ let dailyChart = null;
 let categoryChart = null;
 const API_URL = '/api/habits';
 
+// ========== Motivational Messages ==========
+const COMPLETION_MESSAGES = [
+    "🎉 Awesome! You're building great habits!",
+    "💪 Well done! Keep up the amazing work!",
+    "✨ Fantastic! You're on a roll!",
+    "🌟 You're crushing it! So proud of you!",
+    "🎯 Nice work! Every step counts!",
+    "🚀 You're unstoppable! Great job!",
+    "💫 Excellent! You're making progress!",
+    "🏆 Champion! Another win for you!",
+    "🔥 You're on fire! Keep going!",
+    "⭐ Brilliant! You've got this!",
+    "🎊 Wonderful! You're doing great!",
+    "💝 Love this! You're thriving!",
+    "🌈 Beautiful! Your dedication shows!",
+    "✅ Perfect! You're nailing it!",
+    "🎪 Marvelous! Keep shining!",
+    "🌺 Fabulous! You inspire us!",
+    "🎁 Gift to yourself! Well earned!",
+    "🦋 Amazing! You're transforming!",
+    "🌻 Blooming beautifully! Great work!",
+    "💎 Precious progress! You're valuable!"
+];
+
+const SUPPORT_MESSAGES = [
+    "💙 It's okay! Tomorrow is a fresh start.",
+    "🌱 Progress isn't always linear. You're still growing!",
+    "🤗 Be kind to yourself. Every day is different.",
+    "✨ No worries! What matters is getting back on track.",
+    "🌟 You're human, and that's perfectly fine!",
+    "💫 Small setbacks, big comebacks! You've got this.",
+    "🌈 Life happens! Let's focus on today.",
+    "🦋 Every moment is a chance to begin again.",
+    "🌸 Your worth isn't measured by perfect streaks.",
+    "💝 We all have off days. You're still amazing!",
+    "🌺 Rest is part of the journey. Welcome back!",
+    "☀️ New day, new opportunities! Ready when you are.",
+    "🎈 Shake it off! You're doing better than you think.",
+    "🌻 One missed day doesn't erase your progress.",
+    "💚 Self-compassion is important. You're doing great!",
+    "🍀 Lucky for you, you can start fresh right now!",
+    "🎨 Life is messy and beautiful. Keep creating!",
+    "🌊 Like waves, we ebb and flow. That's natural.",
+    "🎵 Dance through it! Your rhythm is your own.",
+    "🌙 Rest, recharge, and rise again. You're resilient!"
+];
+
+const STREAK_BREAK_MESSAGES = [
+    "💙 Streaks are just numbers. Your growth is real!",
+    "🌱 New beginnings are beautiful! Let's start fresh.",
+    "✨ What you've learned stays with you forever.",
+    "🤗 This is just a pause, not a stop. Keep going!",
+    "💫 Your effort matters more than any streak.",
+    "🌈 Every expert was once a beginner who kept trying.",
+    "🦋 Change and growth take many forms. Trust yourself!",
+    "💝 You're braver than you think. Ready to continue?",
+    "🌸 Perfection isn't the goal—progress is!",
+    "☀️ Today's a good day to be proud of yourself.",
+    "🌺 Your journey is unique and valuable.",
+    "🎈 Celebrate how far you've come already!",
+    "💚 Consistency is built over time, not overnight.",
+    "🍀 Every day you try is a success in itself.",
+    "🎨 Your story is still being written. Keep going!",
+    "🌊 Resilience is getting back up. And here you are!",
+    "🎵 Your rhythm might change, but your song continues.",
+    "🌙 Rest isn't failure—it's preparation for success.",
+    "🌟 Believe in yourself. We believe in you!",
+    "🎁 Give yourself credit for showing up today."
+];
+
+const ENCOURAGEMENT_ON_RETURN = [
+    "🎉 Welcome back! So glad to see you here!",
+    "💪 You're back! That's what matters most!",
+    "✨ Look at you, returning strong!",
+    "🌟 Your comeback story starts now!",
+    "🚀 Back and ready! Let's do this!",
+    "💫 Returning takes courage. Proud of you!",
+    "🏆 The best time to start is now. Welcome!",
+    "🔥 You're here! That's a victory already!",
+    "⭐ Every return is a triumph. Great to have you!",
+    "🎊 Welcome home! Let's build together!",
+    "💝 Missing days made you appreciate today more!",
+    "🌈 Your presence here is powerful!",
+    "🦋 Transformation includes pauses. Ready to soar?",
+    "🌻 Growth includes rest. Let's bloom again!",
+    "💎 You're valuable, returning or not!"
+];
+
 // ========== DOM Elements ==========
 const habitForm = document.getElementById('habit-form');
 const habitInput = document.getElementById('habit-input');
@@ -86,7 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Load initial data
-    loadHabits();
+    loadHabits().then(() => {
+        // Check for return message and missed habits after data loads
+        checkAndShowReturnMessage();
+    });
     switchPage('page-add-habit'); // Show first page by default
 });
 
@@ -407,9 +498,22 @@ async function handleDayClick(habitId, day, dayIndex) {
         const data = await response.json();
         
         if (data.success) {
+            const oldHabit = habits.find(h => h._id === habitId);
+            const oldStreak = oldHabit ? oldHabit.streak : 0;
+            
             await loadHabits();
             loadWeeklyStatus(habitId);
             refreshWeeklyProgress(); // Refresh weekly progress if visible
+            
+            // Check for streak changes and show appropriate message
+            const newHabit = habits.find(h => h._id === habitId);
+            if (newHabit && newStatus === 'completed') {
+                const streakGrew = newHabit.streak > oldStreak;
+                showMotivationalMessage('completion', newHabit, streakGrew);
+            } else if (newStatus === 'incomplete' && oldStreak > 0 && newHabit && newHabit.streak === 0) {
+                // Streak was broken
+                showMotivationalMessage('streak-break', newHabit);
+            }
         } else {
             alert(data.message || 'Failed to update status');
         }
@@ -440,14 +544,24 @@ async function toggleToday(habitId, isChecked) {
             
             if (data.success) {
                 console.log('Success! Reloading habits...');
+                
+                // Check if streak increased (first completion or streak grew)
+                const oldHabit = habits.find(h => h._id === habitId);
                 await loadHabits();
+                const newHabit = habits.find(h => h._id === habitId);
+                
                 displayHabits();
                 if (document.getElementById('page-add-habit').classList.contains('active')) {
                     updateQuickStats();
                 }
                 if (document.getElementById('page-analytics').classList.contains('active')) {
                     loadAnalytics();
-                }                refreshWeeklyProgress(); // Refresh weekly progress if visible                showMessage('✅ Habit marked complete for today!', 'success');
+                }
+                refreshWeeklyProgress(); // Refresh weekly progress if visible
+                
+                // Show encouraging message with streak info
+                const streakGrew = !oldHabit || (newHabit && newHabit.streak > oldHabit.streak);
+                showMotivationalMessage('completion', newHabit, streakGrew);
             } else {
                 console.error('Failed to mark habit:', data.message);
                 // Uncheck the checkbox if it failed
@@ -1590,4 +1704,161 @@ function showMessage(message, type = 'info') {
     // Simple alert for now, could be replaced with a toast notification
     const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
     console.log(`${emoji} ${message}`);
+}
+
+/**
+ * Get random message from array
+ */
+function getRandomMessage(messagesArray) {
+    return messagesArray[Math.floor(Math.random() * messagesArray.length)];
+}
+
+/**
+ * Show motivational message based on action
+ */
+function showMotivationalMessage(type, habit = null, streakGrew = false) {
+    let message = '';
+    let extraInfo = '';
+    let messageColor = '';
+    
+    if (type === 'completion') {
+        message = getRandomMessage(COMPLETION_MESSAGES);
+        messageColor = 'linear-gradient(135deg, #34D399, #059669)';
+        
+        if (habit && habit.streak > 0) {
+            if (streakGrew) {
+                extraInfo = `🔥 ${habit.streak} day streak!`;
+                if (habit.streak === 7) extraInfo += ' 🎉 One week!';
+                if (habit.streak === 30) extraInfo += ' 🏆 One month!';
+                if (habit.streak === 100) extraInfo += ' 👑 Century!';
+            } else {
+                extraInfo = `Streak: ${habit.streak} days`;
+            }
+        }
+    } else if (type === 'missed') {
+        message = getRandomMessage(SUPPORT_MESSAGES);
+        messageColor = 'linear-gradient(135deg, #F59E0B, #D97706)';
+        extraInfo = 'Take it easy on yourself 💙';
+    } else if (type === 'streak-break') {
+        message = getRandomMessage(STREAK_BREAK_MESSAGES);
+        messageColor = 'linear-gradient(135deg, #8B5CF6, #7C3AED)';
+        extraInfo = "What matters is that you're here now 🌟";
+    } else if (type === 'return') {
+        message = getRandomMessage(ENCOURAGEMENT_ON_RETURN);
+        messageColor = 'linear-gradient(135deg, #3B82F6, #2563EB)';
+        extraInfo = "Let's make today count! 💪";
+    }
+    
+    displayMotivationalToast(message, extraInfo, messageColor);
+}
+
+/**
+ * Display motivational toast notification
+ */
+function displayMotivationalToast(message, extraInfo = '', bgColor = '') {
+    const toast = document.createElement('div');
+    toast.className = 'motivational-toast';
+    
+    const backgroundColor = bgColor || 'linear-gradient(135deg, #667eea, #764ba2)';
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <div class="toast-message">${message}</div>
+            ${extraInfo ? `<div class="toast-extra">${extraInfo}</div>` : ''}
+        </div>
+    `;
+    
+    toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: ${backgroundColor};
+        color: white;
+        padding: 20px 28px;
+        border-radius: 16px;
+        font-weight: 600;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        z-index: 10000;
+        animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        max-width: 400px;
+        font-size: 1.1rem;
+        line-height: 1.5;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+    
+    // Click to dismiss
+    toast.addEventListener('click', () => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    });
+}
+
+/**
+ * Detect missed habits and show supportive messages
+ */
+async function checkForMissedHabits() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    let missedCount = 0;
+    let streaksBroken = 0;
+    
+    habits.forEach(habit => {
+        // Check if yesterday should have been tracked
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][yesterday.getDay()];
+        const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
+        
+        if (!shouldSkip) {
+            // Check if yesterday was completed
+            const yesterdayEntry = habit.completionHistory?.find(entry => {
+                const d = new Date(entry.date);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === yesterday.getTime();
+            });
+            
+            if (!yesterdayEntry || yesterdayEntry.status === 'incomplete') {
+                missedCount++;
+                
+                // Check if this broke a streak
+                if (habit.streak === 0 && habit.completionHistory?.some(e => e.status === 'completed')) {
+                    streaksBroken++;
+                }
+            }
+        }
+    });
+    
+    return { missedCount, streaksBroken };
+}
+
+/**
+ * Show welcome back message for returning users
+ */
+function checkAndShowReturnMessage() {
+    const lastVisit = localStorage.getItem('lastVisitDate');
+    const today = new Date().toDateString();
+    
+    if (lastVisit && lastVisit !== today) {
+        const lastVisitDate = new Date(lastVisit);
+        const daysSinceVisit = Math.floor((new Date() - lastVisitDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysSinceVisit >= 2) {
+            // User hasn't visited in 2+ days, show welcoming message
+            setTimeout(() => {
+                showMotivationalMessage('return');
+            }, 1000);
+        }
+    }
+    
+    // Update last visit
+    localStorage.setItem('lastVisitDate', today);
 }
