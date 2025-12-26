@@ -176,6 +176,7 @@ async function addHabit(e) {
     const customCategory = document.getElementById('custom-category-input').value.trim();
     const skipDaysValue = parseInt(document.querySelector('input[name="skip-days"]:checked').value);
     const minimumDuration = document.getElementById('minimum-duration').value;
+    const accountabilityMode = document.getElementById('accountability-mode').checked;
     
     // Get selected skip days
     const skipDays = [];
@@ -205,7 +206,8 @@ async function addHabit(e) {
                 category: finalCategory,
                 daysPerWeek: 7 - skipDaysValue,
                 skipDays,
-                minimumDuration: minimumDuration ? parseInt(minimumDuration) : null
+                minimumDuration: minimumDuration ? parseInt(minimumDuration) : null,
+                accountabilityMode
             })
         });
         
@@ -658,31 +660,35 @@ function createHabitElement(habit) {
     
     return `
         <div class="habit-card ${isCompletedToday ? 'completed-today' : ''}" data-habit-id="${habit._id}">
-            <div class="habit-header">
-                <h3 class="habit-name">${habit.name}</h3>
-                <span class="habit-category">${habit.category || 'general'}</span>
+            <div class="habit-card-header">
+                <div class="habit-card-title-section">
+                    <h3 class="habit-card-title">${habit.name}</h3>
+                    ${habit.description ? `<p class="habit-card-description">${habit.description}</p>` : ''}
+                </div>
+                <span class="habit-card-streak">🔥 ${habit.streak || 0}</span>
             </div>
-            ${habit.description ? `<p class="habit-description">${habit.description}</p>` : ''}
-            ${statusBadge}
-            ${timerDisplay}
-            ${completionInfo}
-            ${habit.minimumDuration ? `<div class="minimum-duration">⏰ Min: ${habit.minimumDuration} minutes</div>` : ''}
-            <div class="habit-stats">
-                <span class="streak">🔥 ${habit.streak || 0} day streak</span>
-                <span class="frequency">${frequencyText}</span>
-            </div>
-            <div class="habit-actions">
-                ${habit.status === 'idle' ? `
-                    <button class="btn-start" onclick="startHabit('${habit._id}')">▶️ Start</button>
-                ` : ''}
-                ${habit.status === 'in-progress' ? `
-                    <button class="btn-pause" onclick="pauseHabit('${habit._id}')">⏸️ Pause</button>
-                    <button class="btn-complete" onclick="completeHabitWithTime('${habit._id}')">✓ Complete</button>
-                ` : ''}
-                ${habit.status === 'completed' ? `
-                    <button class="btn-uncomplete" onclick="toggleToday('${habit._id}', false)">↺ Undo</button>
-                ` : ''}
-                <button class="btn-delete" onclick="deleteHabit('${habit._id}')">Delete</button>
+            
+            ${statusBadge || timerDisplay ? `
+                <div class="habit-card-status">
+                    ${statusBadge}
+                    ${timerDisplay}
+                </div>
+            ` : ''}
+            
+            <div class="habit-card-footer">
+                <div class="habit-card-actions-primary">
+                    ${habit.status === 'idle' ? `
+                        <button class="btn-start" onclick="startHabit('${habit._id}')">Start</button>
+                    ` : ''}
+                    ${habit.status === 'in-progress' ? `
+                        <button class="btn-pause" onclick="pauseHabit('${habit._id}')">Pause</button>
+                        <button class="btn-complete" onclick="completeHabitWithTime('${habit._id}')">Complete</button>
+                    ` : ''}
+                    ${habit.status === 'completed' ? `
+                        <button class="btn-undo" onclick="toggleToday('${habit._id}', false)">Undo</button>
+                    ` : ''}
+                </div>
+                <button class="btn-delete-minimal" onclick="deleteHabit('${habit._id}')" title="Delete habit">×</button>
             </div>
         </div>
     `;

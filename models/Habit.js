@@ -747,6 +747,53 @@ habitSchema.methods._recomputeFromHistory = function () {
     this.streak = streak;
 };
 
+/**
+ * Calculate which badges should be unlocked based on current streak
+ * 
+ * BADGE MILESTONES:
+ * - 7 days: "Week Warrior" 🥉
+ * - 21 days: "Habit Former" 🥈
+ * - 30 days: "Month Master" 🏅
+ * - 50 days: "Halfway Hero" 🎖️
+ * - 100 days: "Century Champion" 🏆
+ * 
+ * STREAK RULES FOR BADGES:
+ * - Completed days count toward streak
+ * - Skipped days maintain streak (don't break it)
+ * - Only missed days (no entry) break the streak
+ * 
+ * RETURNS: Array of badge objects with:
+ * - level: milestone number
+ * - name: badge name
+ * - icon: badge emoji
+ * - days: days required
+ * - unlocked: whether user has reached this milestone
+ */
+habitSchema.methods.getBadges = function() {
+    const badges = [
+        { level: 1, name: 'Week Warrior', icon: '🥉', days: 7 },
+        { level: 2, name: 'Habit Former', icon: '🥈', days: 21 },
+        { level: 3, name: 'Month Master', icon: '🏅', days: 30 },
+        { level: 4, name: 'Halfway Hero', icon: '🎖️', days: 50 },
+        { level: 5, name: 'Century Champion', icon: '🏆', days: 100 }
+    ];
+    
+    return badges.map(badge => ({
+        ...badge,
+        unlocked: this.streak >= badge.days
+    }));
+};
+
+/**
+ * Get the highest badge level unlocked
+ * Returns 0 if no badges unlocked yet
+ */
+habitSchema.methods.getHighestBadge = function() {
+    const badges = this.getBadges();
+    const unlocked = badges.filter(b => b.unlocked);
+    return unlocked.length > 0 ? unlocked[unlocked.length - 1] : null;
+};
+
 // ========== Static Methods (Class-level queries) ==========
 
 /**

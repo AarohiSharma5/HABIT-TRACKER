@@ -172,7 +172,7 @@ exports.getHabitById = async (req, res) => {
  */
 exports.createHabit = async (req, res) => {
     try {
-        const { name, description, category, daysPerWeek, skipDays, minimumDuration } = req.body;
+        const { name, description, category, daysPerWeek, skipDays, minimumDuration, accountabilityMode } = req.body;
         const userId = req.session.userId;
         
         if (!name || name.trim() === '') {
@@ -200,7 +200,8 @@ exports.createHabit = async (req, res) => {
             category: category || 'general',
             daysPerWeek: daysPerWeek || 7,
             skipDays: skipDays || [],
-            minimumDuration: minimumDuration ? parseInt(minimumDuration) : null
+            minimumDuration: minimumDuration ? parseInt(minimumDuration) : null,
+            accountabilityMode: accountabilityMode || false
         };
         
         const habit = new Habit(habitData);
@@ -294,10 +295,37 @@ exports.deleteHabit = async (req, res) => {
 
 /**
  * Mark habit as completed for today
+ * 
+ * CRITICAL FLOW:
+ * 1. Validates habit exists and belongs to user
+ * 2. Requires reflection (minimum 5 characters) - enforces mindfulness
+ * 3. Performs soft pattern detection (gentle accountability nudges)
+ * 4. Calls habit.complete() which:
+ *    - Checks if already completed today (prevents duplicates)
+ *    - Validates streak continuation logic (completed/skipped maintain, missed breaks)
+ *    - Adds entry to completionHistory[] (permanent database record)
+ *    - Updates streak counter based on consecutive active days
+ *    - Sets status to 'completed' and saves timestamps
+ * 5. Returns success with encouraging message
+ * 
+ * STREAK LOGIC (IMPLEMENTED IN MODEL):
+ * - Yesterday completed OR skipped → streak continues (+1)
+ * - Yesterday missed (no entry) → streak resets to 1
+ * - Skipped days DO NOT break streaks (as per specification)
+ * 
+ * PATTERN DETECTION (SOFT ACCOUNTABILITY):
+ * - Detects fast completions, instant completions without timer
+ * - Shows gentle reminders, never blocks or punishes
+ * - Encourages meaningful engagement with habits
+ * 
+ * REFLECTION REQUIREMENT:
+ * - Enforced before completion via modal (frontend)
+ * - Stored in completionHistory entry for review
+ * - Used in honesty check to promote self-awareness
  */
 exports.completeHabit = async (req, res) => {
     try {
-        const { duration, reflection } = req.body; // Get duration and reflection from request body
+        const { duration, reflection } = req.body;
         
         const habit = await Habit.findOne({ 
             _id: req.params.id, 
@@ -311,7 +339,8 @@ exports.completeHabit = async (req, res) => {
             });
         }
         
-        // Validate reflection if provided
+        // REFLECTION VALIDATION: Enforce meaningful reflection (at least 5 characters)
+        // This promotes self-awareness and mindfulness about the habit
         if (reflection !== undefined && reflection !== null && reflection.trim().length < 5) {
             return res.status(400).json({
                 success: false,
@@ -319,20 +348,22 @@ exports.completeHabit = async (req, res) => {
             });
         }
         
-        // PATTERN DETECTION: Soft accountability checks
+        // PATTERN DETECTION: Soft accountability checks (non-blocking)
+        // These detect suspicious patterns and provide gentle nudges
+        // IMPORTANT: Never blocks completion, only provides supportive reminders
         const patternWarnings = [];
         
-        // Check 1: Fast completion (completed in less than 1 minute without being started)
+        // Pattern 1: Fast completion (completed in less than 1 minute without being started)
         if (!habit.startedAt && duration && duration < 60) {
             patternWarnings.push('completed very quickly');
         }
         
-        // Check 2: Habit completed without being started (instant completion)
+        // Pattern 2: Habit completed without being started (instant completion)
         if (!habit.startedAt && habit.status === 'idle') {
             patternWarnings.push('completed without timer');
         }
         
-        // Check 3: Check for same-timestamp completions today
+        // Pattern 3: Check for duplicate completion attempts (should be caught by model)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayCompletions = habit.completionHistory.filter(entry => {
@@ -342,10 +373,10 @@ exports.completeHabit = async (req, res) => {
         });
         
         if (todayCompletions.length > 0) {
-            // Already has completion today - this is caught elsewhere but good to track
             patternWarnings.push('duplicate completion attempt');
         }
         
+        // COMPLETE THE HABIT: Calls model method which handles all streak logic
         await habit.complete(duration, reflection);
         
         // Prepare response message
@@ -525,7 +556,31 @@ exports.uncompleteHabit = async (req, res) => {
 };
 
 /**
- * Skip a day for a habit
+ * Skip a day for a habit (mark as intentionally not done)
+ * 
+ * SKIP RULES (ENFORCED IN MODEL):
+ * 1. Maximum 1 skip per week (Monday-Sunday)
+ * 2. Cannot skip 2 consecutive days
+ * 3. Skipped days DO NOT break streaks (maintains consistency)
+ * 4. Skipped days count as "active" days (habit maintained)
+ * 
+ * IMPLEMENTATION:
+ * - Calls habit.skipDay() which validates all skip rules
+ * - Adds 'skipped' entry to completionHistory
+ * - Updates lastCompleted to maintain streak
+ * - Does NOT reset or break the streak counter
+ * 
+ * STREAK IMPACT:
+ * - Yesterday completed + today skipped → streak continues
+ * - Yesterday skipped + today skipped → ERROR (consecutive skip rule)
+ * - Skips are treated as active engagement, not missed days
+ * 
+ * WHY SKIPS DON'T BREAK STREAKS:
+ * The specification states that skipped days maintain streaks because:
+ * - Users are being intentional about their habit
+ * - Rest days are planned, not failures
+ * - Consistency is about engagement, not perfection
+ * - Only missed days (no entry at all) indicate disengagement
  */
 exports.skipHabit = async (req, res) => {
     try {
