@@ -174,6 +174,17 @@
                         <strong>Rest days:</strong> <span id="selected-days-list"></span>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label for="minimum-duration">Minimum Duration (Optional)</label>
+                    <small class="form-help">Set a minimum time requirement in minutes (leave blank for no time limit)</small>
+                    <input 
+                        type="number" 
+                        id="minimum-duration" 
+                        placeholder="e.g., 30 (minutes)"
+                        min="1"
+                        max="480"
+                    >
+                </div>
                 <button type="submit" class="btn-primary">Create Habit</button>
             </form>
         </section>
@@ -512,6 +523,47 @@
         </section>
     </div>
 
+</div>
+
+<!-- Reflection Modal -->
+<div id="reflection-modal" class="modal">
+    <div class="modal-content">
+        <h2>✍️ Reflection Time</h2>
+        <p class="modal-subtitle">Before marking this habit as complete, take a moment to reflect on what you did.</p>
+        
+        <form id="reflection-form">
+            <div class="form-group">
+                <label for="reflection-input">What did you do?</label>
+                <textarea 
+                    id="reflection-input" 
+                    rows="4"
+                    placeholder="Describe what you accomplished... (minimum 5 characters)"
+                    required
+                ></textarea>
+                <small class="char-count" id="reflection-char-count">0 characters</small>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeReflectionModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Complete Habit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Honesty Check Modal -->
+<div id="honesty-modal" class="modal">
+    <div class="modal-content">
+        <h2>🌙 End of Day Reflection</h2>
+        <p class="modal-subtitle">Let's take a moment to honestly review today's habits. Your honesty helps you grow!</p>
+        
+        <div id="honesty-habits-list"></div>
+        
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="skipHonestyCheck()">Skip for now</button>
+            <button type="button" class="btn-primary" onclick="submitHonestyReview()">Submit Review</button>
+        </div>
+    </div>
 </div>
 
 <%- include('partials/footer') %>

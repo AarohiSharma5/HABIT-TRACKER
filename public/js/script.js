@@ -4,130 +4,135 @@
  */
 
 // ========== Global Variables ==========
+const API_URL = '/api/habits';
 let habits = [];
+let activeTimers = {}; // Store active timers: { habitId: { startTime, intervalId, notified } }
 let dailyChart = null;
 let categoryChart = null;
 let weeklyOverviewChart = null;
-const API_URL = '/api/habits';
+let timerInterval = null;
+let notificationSound = null;
 
-// ========== Motivational Messages ==========
-const COMPLETION_MESSAGES = [
-    "🎉 Awesome! You're building great habits!",
-    "💪 Well done! Keep up the amazing work!",
-    "✨ Fantastic! You're on a roll!",
-    "🌟 You're crushing it! So proud of you!",
-    "🎯 Nice work! Every step counts!",
-    "🚀 You're unstoppable! Great job!",
-    "💫 Excellent! You're making progress!",
-    "🏆 Champion! Another win for you!",
-    "🔥 You're on fire! Keep going!",
-    "⭐ Brilliant! You've got this!",
-    "🎊 Wonderful! You're doing great!",
-    "💝 Love this! You're thriving!",
-    "🌈 Beautiful! Your dedication shows!",
-    "✅ Perfect! You're nailing it!",
-    "🎪 Marvelous! Keep shining!",
-    "🌺 Fabulous! You inspire us!",
-    "🎁 Gift to yourself! Well earned!",
-    "🦋 Amazing! You're transforming!",
-    "🌻 Blooming beautifully! Great work!",
-    "💎 Precious progress! You're valuable!"
-];
+// Initialize notification sound
+try {
+    notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDKE0fPTgjMGHm7A7+OZURE=');
+    notificationSound.volume = 0.5;
+} catch (e) {
+    console.warn('Audio notification not available:', e);
+}
 
-const SUPPORT_MESSAGES = [
-    "💙 It's okay! Tomorrow is a fresh start.",
-    "🌱 Progress isn't always linear. You're still growing!",
-    "🤗 Be kind to yourself. Every day is different.",
-    "✨ No worries! What matters is getting back on track.",
-    "🌟 You're human, and that's perfectly fine!",
-    "💫 Small setbacks, big comebacks! You've got this.",
-    "🌈 Life happens! Let's focus on today.",
-    "🦋 Every moment is a chance to begin again.",
-    "🌸 Your worth isn't measured by perfect streaks.",
-    "💝 We all have off days. You're still amazing!",
-    "🌺 Rest is part of the journey. Welcome back!",
-    "☀️ New day, new opportunities! Ready when you are.",
-    "🎈 Shake it off! You're doing better than you think.",
-    "🌻 One missed day doesn't erase your progress.",
-    "💚 Self-compassion is important. You're doing great!",
-    "🍀 Lucky for you, you can start fresh right now!",
-    "🎨 Life is messy and beautiful. Keep creating!",
-    "🌊 Like waves, we ebb and flow. That's natural.",
-    "🎵 Dance through it! Your rhythm is your own.",
-    "🌙 Rest, recharge, and rise again. You're resilient!"
-];
-
-const STREAK_BREAK_MESSAGES = [
-    "💙 Streaks are just numbers. Your growth is real!",
-    "🌱 New beginnings are beautiful! Let's start fresh.",
-    "✨ What you've learned stays with you forever.",
-    "🤗 This is just a pause, not a stop. Keep going!",
-    "💫 Your effort matters more than any streak.",
-    "🌈 Every expert was once a beginner who kept trying.",
-    "🦋 Change and growth take many forms. Trust yourself!",
-    "💝 You're braver than you think. Ready to continue?",
-    "🌸 Perfection isn't the goal—progress is!",
-    "☀️ Today's a good day to be proud of yourself.",
-    "🌺 Your journey is unique and valuable.",
-    "🎈 Celebrate how far you've come already!",
-    "💚 Consistency is built over time, not overnight.",
-    "🍀 Every day you try is a success in itself.",
-    "🎨 Your story is still being written. Keep going!",
-    "🌊 Resilience is getting back up. And here you are!",
-    "🎵 Your rhythm might change, but your song continues.",
-    "🌙 Rest isn't failure—it's preparation for success.",
-    "🌟 Believe in yourself. We believe in you!",
-    "🎁 Give yourself credit for showing up today."
-];
-
-const ENCOURAGEMENT_ON_RETURN = [
-    "🎉 Welcome back! So glad to see you here!",
-    "💪 You're back! That's what matters most!",
-    "✨ Look at you, returning strong!",
-    "🌟 Your comeback story starts now!",
-    "🚀 Back and ready! Let's do this!",
-    "💫 Returning takes courage. Proud of you!",
-    "🏆 The best time to start is now. Welcome!",
-    "🔥 You're here! That's a victory already!",
-    "⭐ Every return is a triumph. Great to have you!",
-    "🎊 Welcome home! Let's build together!",
-    "💝 Missing days made you appreciate today more!",
-    "🌈 Your presence here is powerful!",
-    "🦋 Transformation includes pauses. Ready to soar?",
-    "🌻 Growth includes rest. Let's bloom again!",
-    "💎 You're valuable, returning or not!"
-];
-
-// ========== DOM Elements ==========
-const habitForm = document.getElementById('habit-form');
-const habitInput = document.getElementById('habit-input');
-const habitCategoryInput = document.getElementById('habit-category');
-const habitsContainer = document.getElementById('habits-container');
-
-// ========== Page Navigation ==========
+// ========== Page Navigation Functions ==========
 
 /**
- * Initialize navigation and load content
+ * Switch between different pages
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // Set up navigation links
+function switchPage(pageId) {
+    // Hide all pages
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(page => page.classList.remove('active'));
+    
+    // Show selected page
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+    
+    // Update active nav link
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        if (link.dataset.page === pageId) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+    
+    // Load page-specific content
+    if (pageId === 'page-analytics') {
+        loadAnalytics();
+    } else if (pageId === 'page-weekly-progress') {
+        loadWeeklyProgress();
+    } else if (pageId === 'page-profile') {
+        loadProfile();
+    } else if (pageId === 'page-all-habits') {
+        displayHabits();
+    } else if (pageId === 'page-add-habit') {
+        updateQuickStats();
+    }
+}
+
+// ========== DOM Ready ==========
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadHabits();
+    updateQuickStats();
+    displayHabits();
+    
+    // Check for honesty review after page load
+    setTimeout(() => checkForHonestyReview(), 1000);
+    
+    // Setup navigation
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const pageId = link.getAttribute('data-page');
+            const pageId = link.dataset.page;
             switchPage(pageId);
         });
     });
-
-    // Add habit form listener
+    
+    // Setup form submission
+    const habitForm = document.getElementById('habit-form');
     if (habitForm) {
         habitForm.addEventListener('submit', addHabit);
     }
-
-    // Category dropdown change listener
+    
+    // Setup skip days selection handler
+    const skipDaysRadios = document.querySelectorAll('input[name="skip-days"]');
+    const specificDaysGroup = document.getElementById('specific-days-group');
+    const skipDaysHelp = document.getElementById('skip-days-help');
+    const dayCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]');
+    
+    // Add checkbox listeners once (not inside radio handler)
+    dayCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const selectedRadio = document.querySelector('input[name="skip-days"]:checked');
+            const maxSkipDays = parseInt(selectedRadio.value);
+            const checkedBoxes = document.querySelectorAll('input[name="skip-specific-days"]:checked');
+            
+            // Enforce selection limit
+            if (checkedBoxes.length > maxSkipDays) {
+                checkbox.checked = false;
+                showMessage(`You can only select ${maxSkipDays} day${maxSkipDays > 1 ? 's' : ''} to skip`, 'info');
+            }
+            
+            // Update preview
+            updateSkipDaysPreview();
+        });
+    });
+    
+    skipDaysRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const skipCount = parseInt(e.target.value);
+            if (skipCount > 0) {
+                specificDaysGroup.style.display = 'block';
+                skipDaysHelp.textContent = `Select exactly ${skipCount} day${skipCount > 1 ? 's' : ''} to skip`;
+                
+                // Clear previous selections
+                dayCheckboxes.forEach(cb => cb.checked = false);
+                updateSkipDaysPreview();
+            } else {
+                specificDaysGroup.style.display = 'none';
+                // Clear selections
+                dayCheckboxes.forEach(cb => cb.checked = false);
+                updateSkipDaysPreview();
+            }
+        });
+    });
+    
+    // Setup category selection handler
     const categorySelect = document.getElementById('habit-category');
     const customCategoryGroup = document.getElementById('custom-category-group');
+    
     if (categorySelect && customCategoryGroup) {
         categorySelect.addEventListener('change', (e) => {
             if (e.target.value === 'other') {
@@ -137,210 +142,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // Skip days radio button change listener
-    const skipDaysRadios = document.querySelectorAll('input[name="skip-days"]');
-    const specificDaysGroup = document.getElementById('specific-days-group');
-    skipDaysRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            const skipDays = parseInt(e.target.value);
-            if (skipDays > 0 && specificDaysGroup) {
-                specificDaysGroup.style.display = 'block';
-                updateSkipDaysHelp(skipDays);
-                // Clear previous selections
-                document.querySelectorAll('input[name="skip-specific-days"]').forEach(cb => cb.checked = false);
-                updateSelectedDaysPreview();
-            } else if (specificDaysGroup) {
-                specificDaysGroup.style.display = 'none';
-            }
-        });
-    });
-
-    // Day checkboxes change listener
-    const dayCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]');
-    dayCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            const skipDaysElement = document.querySelector('input[name="skip-days"]:checked');
-            const maxSkipDays = skipDaysElement ? parseInt(skipDaysElement.value) : 0;
-            const checkedCount = document.querySelectorAll('input[name="skip-specific-days"]:checked').length;
-            
-            // Limit selection to the number of skip days chosen
-            if (checkedCount > maxSkipDays) {
-                checkbox.checked = false;
-                alert(`You can only select ${maxSkipDays} day(s) to skip.`);
-            }
-            
-            updateSelectedDaysPreview();
-        });
-    });
-
-    // Load initial data
-    loadHabits().then(() => {
-        // Check for return message and missed habits after data loads
-        checkAndShowReturnMessage();
-    });
-    switchPage('page-add-habit'); // Show first page by default
+    
+    switchPage('page-add-habit');
 });
 
-/**
- * Update the help text based on selected skip days
- */
-function updateSkipDaysHelp(skipDays) {
-    const helpText = document.getElementById('skip-days-help');
-    if (helpText) {
-        helpText.textContent = `Select exactly ${skipDays} day(s) to skip`;
-    }
-}
+// ========== API Functions ==========
 
 /**
- * Update the preview of selected days
- */
-function updateSelectedDaysPreview() {
-    const selectedCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]:checked');
-    const preview = document.getElementById('selected-days-preview');
-    const listSpan = document.getElementById('selected-days-list');
-    
-    if (selectedCheckboxes.length > 0) {
-        const dayNames = Array.from(selectedCheckboxes).map(cb => {
-            return cb.value.charAt(0).toUpperCase() + cb.value.slice(1);
-        });
-        listSpan.textContent = dayNames.join(', ');
-        preview.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-    }
-}
-
-/**
- * Switch between pages
- */
-function switchPage(pageId) {
-    // Hide all pages
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(page => page.classList.remove('active'));
-
-    // Remove active state from all nav links
-    const navLinks = document.querySelectorAll('.nav-link');
-    navLinks.forEach(link => link.classList.remove('active'));
-
-    // Show selected page
-    const selectedPage = document.getElementById(pageId);
-    if (selectedPage) {
-        selectedPage.classList.add('active');
-    }
-
-    // Add active state to clicked nav link
-    const activeLink = document.querySelector(`[data-page="${pageId}"]`);
-    if (activeLink) {
-        activeLink.classList.add('active');
-    }
-
-    // Load page-specific content
-    if (pageId === 'page-add-habit') {
-        updateQuickStats();
-    } else if (pageId === 'page-all-habits') {
-        displayHabits();
-    } else if (pageId === 'page-analytics') {
-        loadAnalytics();
-    } else if (pageId === 'page-weekly-progress') {
-        loadWeeklyProgress();
-    } else if (pageId === 'page-profile') {
-        loadProfile();
-    }
-}
-
-// ========== Habit Management ==========
-
-/**
- * Add a new habit
- */
-async function addHabit(e) {
-    e.preventDefault();
-    
-    const habitName = habitInput.value.trim();
-    let category = habitCategoryInput.value;
-    const skipDaysElement = document.querySelector('input[name="skip-days"]:checked');
-    const skipDays = skipDaysElement ? parseInt(skipDaysElement.value) : 0;
-    const daysPerWeek = 7 - skipDays;
-    
-    // Get selected specific days to skip
-    const selectedDays = Array.from(document.querySelectorAll('input[name="skip-specific-days"]:checked'))
-        .map(cb => cb.value);
-    
-    // Validate that the number of selected days matches skip days count
-    if (skipDays > 0 && selectedDays.length !== skipDays) {
-        alert(`Please select exactly ${skipDays} day(s) to skip.`);
-        return;
-    }
-    
-    // Check if custom category is selected
-    if (category === 'other') {
-        const customCategoryInput = document.getElementById('custom-category-input');
-        const customCategory = customCategoryInput ? customCategoryInput.value.trim() : '';
-        if (customCategory) {
-            category = customCategory.toLowerCase();
-        } else {
-            alert('Please enter a custom category name');
-            return;
-        }
-    }
-    
-    if (habitName === '') {
-        alert('Please enter a habit name');
-        return;
-    }
-    
-    console.log('Sending habit data:', { 
-        name: habitName, 
-        category, 
-        daysPerWeek,
-        skipDays: selectedDays 
-    });
-    
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                name: habitName, 
-                category, 
-                daysPerWeek,
-                skipDays: selectedDays // Send array of day names to skip
-            })
-        });
-        
-        const data = await response.json();
-        console.log('Server response:', data);
-        
-        if (data.success) {
-            habitInput.value = '';
-            const customCategoryInput = document.getElementById('custom-category-input');
-            if (customCategoryInput) customCategoryInput.value = '';
-            document.getElementById('custom-category-group').style.display = 'none';
-            habitCategoryInput.value = 'health'; // Reset to default
-            // Reset skip days selection to 0
-            const defaultSkipRadio = document.querySelector('input[name="skip-days"][value="0"]');
-            if (defaultSkipRadio) defaultSkipRadio.checked = true;
-            // Hide specific days group and clear selections
-            const specificDaysGroup = document.getElementById('specific-days-group');
-            if (specificDaysGroup) specificDaysGroup.style.display = 'none';
-            document.querySelectorAll('input[name="skip-specific-days"]').forEach(cb => cb.checked = false);
-            updateSelectedDaysPreview();
-            await loadHabits();
-            updateQuickStats();
-            showMessage('Habit added successfully! 🎉', 'success');
-        } else {
-            console.error('Failed to create habit:', data);
-            alert(data.message || 'Failed to add habit');
-        }
-    } catch (error) {
-        console.error('Error adding habit:', error);
-        alert(`Failed to add habit: ${error.message || 'Please try again.'}`);
-    }
-}
-
-/**
- * Load all habits from the server
+ * Load all habits from server
  */
 async function loadHabits() {
     try {
@@ -348,7 +157,7 @@ async function loadHabits() {
         const data = await response.json();
         
         if (data.success) {
-            habits = data.data;
+            habits = data.habits;
         }
     } catch (error) {
         console.error('Error loading habits:', error);
@@ -356,269 +165,406 @@ async function loadHabits() {
 }
 
 /**
- * Display habits list
+ * Add new habit
  */
-function displayHabits() {
-    if (!habitsContainer) return;
+async function addHabit(e) {
+    e.preventDefault();
     
-    if (habits.length === 0) {
-        habitsContainer.innerHTML = '<p class="no-habits">No habits yet. Add your first habit to get started! 🌟</p>';
+    const name = document.getElementById('habit-input').value.trim();
+    const description = document.getElementById('habit-description').value.trim();
+    const category = document.getElementById('habit-category').value;
+    const customCategory = document.getElementById('custom-category-input').value.trim();
+    const skipDaysValue = parseInt(document.querySelector('input[name="skip-days"]:checked').value);
+    const minimumDuration = document.getElementById('minimum-duration').value;
+    
+    // Get selected skip days
+    const skipDays = [];
+    const skipDaysCheckboxes = document.querySelectorAll('input[name="skip-specific-days"]:checked');
+    skipDaysCheckboxes.forEach(checkbox => skipDays.push(checkbox.value));
+    
+    if (!name) {
+        showMessage('Please enter a habit name', 'error');
         return;
     }
     
-    habitsContainer.innerHTML = '';
-    habits.forEach(habit => {
-        const habitElement = createHabitElement(habit);
-        habitsContainer.appendChild(habitElement);
-    });
-    
-    console.log('Habits displayed:', habits.length);
-}
-
-/**
- * Create habit element with weekly calendar
- */
-function createHabitElement(habit) {
-    const habitDiv = document.createElement('div');
-    habitDiv.className = 'habit-item';
-    
-    // Check if today is completed
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayEntry = habit.completionHistory?.find(entry => {
-        const d = new Date(entry.date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === today.getTime();
-    });
-    const isCompletedToday = todayEntry && todayEntry.status === 'completed';
-    
-    console.log(`Habit: ${habit.name}, Completed today: ${isCompletedToday}, Streak: ${habit.streak}`);
-    
-    // Get frequency display text
-    const frequencyText = habit.daysPerWeek === 7 
-        ? 'Daily' 
-        : `${habit.daysPerWeek} days/week`;
-    
-    habitDiv.innerHTML = `
-        <div class="habit-header">
-            <div>
-                <h3>${habit.name}</h3>
-                <div class="habit-meta">
-                    ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
-                    <span class="frequency-tag">${frequencyText}</span>
-                </div>
-            </div>
-            <div class="habit-stats">
-                <span class="streak">🔥 ${habit.streak} day streak</span>
-                <label class="checkbox-container">
-                    <input 
-                        type="checkbox" 
-                        class="habit-checkbox" 
-                        ${isCompletedToday ? 'checked' : ''}
-                        onchange="toggleToday('${habit._id}', this.checked)"
-                    >
-                    <span class="checkbox-label">Complete Today</span>
-                </label>
-                <button class="btn-delete" onclick="deleteHabit('${habit._id}')">Delete</button>
-            </div>
-        </div>
-        <div class="weekly-calendar" id="calendar-${habit._id}"></div>
-    `;
-    
-    // Load weekly status for this habit
-    loadWeeklyStatus(habit._id);
-    
-    return habitDiv;
-}
-
-/**
- * Load weekly status for a habit
- */
-async function loadWeeklyStatus(habitId) {
-    try {
-        const response = await fetch(`${API_URL}/${habitId}/weekly`);
-        const data = await response.json();
-        
-        if (data.success) {
-            displayWeeklyCalendar(habitId, data.data.weekStatus);
-        }
-    } catch (error) {
-        console.error('Error loading weekly status:', error);
+    // Validate skip days selection
+    if (skipDaysValue > 0 && skipDays.length !== skipDaysValue) {
+        showMessage(`Please select exactly ${skipDaysValue} day${skipDaysValue > 1 ? 's' : ''} to skip`, 'error');
+        return;
     }
-}
-
-/**
- * Display weekly calendar
- */
-function displayWeeklyCalendar(habitId, weekStatus) {
-    const calendarDiv = document.getElementById(`calendar-${habitId}`);
-    if (!calendarDiv) return;
     
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    calendarDiv.innerHTML = '';
-    
-    weekStatus.forEach((day, index) => {
-        const dayDiv = document.createElement('div');
-        dayDiv.className = `day-cell ${day.status}`;
-        dayDiv.innerHTML = `
-            <div class="day-name">${days[index]}</div>
-            <div class="day-date">${day.dayOfMonth}</div>
-        `;
-        
-        dayDiv.addEventListener('click', () => handleDayClick(habitId, day, index));
-        calendarDiv.appendChild(dayDiv);
-    });
-}
-
-/**
- * Handle day cell click
- */
-async function handleDayClick(habitId, day, dayIndex) {
-    const statusCycle = {
-        'incomplete': 'completed',
-        'completed': 'skipped',
-        'skipped': 'incomplete'
-    };
-    
-    const newStatus = statusCycle[day.status];
+    const finalCategory = category === 'other' && customCategory ? customCategory : category;
     
     try {
-        const endpoint = newStatus === 'skipped' ? 
-            `${API_URL}/${habitId}/skip` : 
-            `${API_URL}/${habitId}/day`;
-        
-        const response = await fetch(endpoint, {
-            method: newStatus === 'skipped' ? 'POST' : 'PUT',
+        const response = await fetch(API_URL, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                dayIndex,
-                status: newStatus
+            body: JSON.stringify({
+                name,
+                description,
+                category: finalCategory,
+                daysPerWeek: 7 - skipDaysValue,
+                skipDays,
+                minimumDuration: minimumDuration ? parseInt(minimumDuration) : null
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            const oldHabit = habits.find(h => h._id === habitId);
-            const oldStreak = oldHabit ? oldHabit.streak : 0;
-            
             await loadHabits();
-            loadWeeklyStatus(habitId);
-            refreshWeeklyProgress(); // Refresh weekly progress if visible
-            
-            // Check for streak changes and show appropriate message
-            const newHabit = habits.find(h => h._id === habitId);
-            if (newHabit && newStatus === 'completed') {
-                const streakGrew = newHabit.streak > oldStreak;
-                showMotivationalMessage('completion', newHabit, streakGrew);
-            } else if (newStatus === 'incomplete' && oldStreak > 0 && newHabit && newHabit.streak === 0) {
-                // Streak was broken
-                showMotivationalMessage('streak-break', newHabit);
-            }
-        } else {
-            alert(data.message || 'Failed to update status');
+            updateQuickStats();
+            displayHabits();
+            document.getElementById('habit-form').reset();
+            showMessage('Habit added successfully! 🎉', 'success');
         }
     } catch (error) {
-        console.error('Error updating day status:', error);
-        alert('Failed to update status. Please try again.');
+        console.error('Error adding habit:', error);
+        alert('Failed to add habit');
     }
 }
 
 /**
- * Toggle habit completion for today
+ * Toggle habit completion
+ * Saves completedAt timestamp and updates status to "completed"
+ * Prevents re-completion for the same day
+ * 
+ * STATE MANAGEMENT & GRAPH UPDATES:
+ * - Updates habit state in database
+ * - Reloads all habits to sync UI with database
+ * - Refreshes weekly progress graphs
+ * - Updates analytics charts if visible
+ * - Ensures all visualizations stay in sync with data
  */
-async function toggleToday(habitId, isChecked) {
-    console.log('toggleToday called:', habitId, isChecked);
-    
+window.toggleToday = async function(habitId, isChecked) {
     try {
-        if (isChecked) {
-            // Mark as complete
-            console.log('Marking habit as complete...');
-            const response = await fetch(`${API_URL}/${habitId}/complete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+        // Find the habit to check if already completed
+        const habit = habits.find(h => h._id === habitId);
+        
+        if (isChecked && habit) {
+            // Check if already completed today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayEntry = habit.completionHistory?.find(entry => {
+                const d = new Date(entry.date);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === today.getTime();
             });
             
-            console.log('Response status:', response.status);
-            const data = await response.json();
-            console.log('Response data:', data);
+            if (todayEntry && todayEntry.status === 'completed') {
+                showMessage('Already completed today! 🎉', 'info');
+                return;
+            }
+        }
+        
+        const url = `${API_URL}/${habitId}/${isChecked ? 'complete' : 'uncomplete-today'}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Reload habits from database to get updated state
+            await loadHabits();
             
-            if (data.success) {
-                console.log('Success! Reloading habits...');
-                
-                // Check if streak increased (first completion or streak grew)
-                const oldHabit = habits.find(h => h._id === habitId);
-                await loadHabits();
-                const newHabit = habits.find(h => h._id === habitId);
-                
-                displayHabits();
-                if (document.getElementById('page-add-habit').classList.contains('active')) {
-                    updateQuickStats();
-                }
-                if (document.getElementById('page-analytics').classList.contains('active')) {
-                    loadAnalytics();
-                }
-                refreshWeeklyProgress(); // Refresh weekly progress if visible
-                
-                // Show encouraging message with streak info
-                const streakGrew = !oldHabit || (newHabit && newHabit.streak > oldHabit.streak);
-                showMotivationalMessage('completion', newHabit, streakGrew);
+            // Update all UI components with new data
+            updateQuickStats();
+            displayHabits();
+            
+            // Refresh weekly progress graphs if that page is active
+            refreshWeeklyProgress();
+            
+            // Refresh analytics charts if that page is active
+            if (document.getElementById('page-analytics')?.classList.contains('active')) {
+                loadAnalytics();
+            }
+            
+            if (isChecked) {
+                showMessage(`🎉 ${data.message || 'Great job!'}`, 'success');
             } else {
-                console.error('Failed to mark habit:', data.message);
-                // Uncheck the checkbox if it failed
-                await loadHabits();
-                displayHabits();
-                alert(data.message || 'Failed to mark habit');
+                showMessage('👍 Unmarked for today', 'success');
             }
         } else {
-            // Unmark (uncomplete)
-            console.log('Unmarking habit...');
-            const response = await fetch(`${API_URL}/${habitId}/uncomplete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            console.log('Response status:', response.status);
-            const data = await response.json();
-            console.log('Response data:', data);
-            
-            if (data.success) {
-                console.log('Success! Reloading habits...');
-                await loadHabits();
-                displayHabits();
-                if (document.getElementById('page-add-habit').classList.contains('active')) {
-                    updateQuickStats();
-                }
-                if (document.getElementById('page-analytics').classList.contains('active')) {
-                    loadAnalytics();
-                }
-                refreshWeeklyProgress(); // Refresh weekly progress if visible
-                showMessage('↩️ Habit unmarked for today', 'info');
-            } else {
-                console.error('Failed to unmark habit:', data.message);
-                // Re-check the checkbox if it failed
-                await loadHabits();
-                displayHabits();
-                alert(data.message || 'Failed to unmark habit');
-            }
+            showMessage(data.message || 'Failed to update habit', 'error');
         }
     } catch (error) {
         console.error('Error toggling habit:', error);
-        console.error('Error stack:', error.stack);
-        alert('Failed to update habit: ' + error.message);
-        // Reload to reset checkbox state
-        await loadHabits();
-        displayHabits();
+        showMessage('Failed to update habit', 'error');
     }
 }
 
 /**
- * Delete a habit
+ * Start habit timer
+ * Sets status to in-progress and starts tracking time
+ * Ensures only one habit timer runs at a time
  */
-async function deleteHabit(habitId) {
-    if (!confirm('Are you sure you want to delete this habit?')) {
-        return;
+window.startHabit = async function(habitId) {
+    try {
+        // Check if any other habit is currently in progress
+        const inProgressHabit = habits.find(h => h.status === 'in-progress' && h._id !== habitId);
+        if (inProgressHabit) {
+            const continueStart = confirm(
+                `"${inProgressHabit.name}" is currently in progress. Do you want to pause it and start "${habits.find(h => h._id === habitId)?.name}"?`
+            );
+            
+            if (!continueStart) {
+                return;
+            }
+            
+            // Pause the current habit first
+            await pauseHabit(inProgressHabit._id);
+        }
+        
+        const response = await fetch(`${API_URL}/${habitId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Stop any existing timer (just in case)
+            Object.keys(activeTimers).forEach(id => {
+                if (id !== habitId && activeTimers[id]) {
+                    clearInterval(activeTimers[id].intervalId);
+                    delete activeTimers[id];
+                }
+            });
+            
+            // Start local timer
+            const startTime = Date.now();
+            activeTimers[habitId] = {
+                startTime,
+                notified: false,
+                intervalId: setInterval(() => {
+                    updateTimerDisplay(habitId, startTime);
+                }, 1000)
+            };
+            
+            // Reload habits to update UI
+            await loadHabits();
+            displayHabits();
+            showMessage('⏱️ Timer started!', 'success');
+        } else {
+            showMessage(data.message || 'Failed to start habit', 'error');
+        }
+    } catch (error) {
+        console.error('Error starting habit:', error);
+        showMessage('Failed to start habit', 'error');
     }
+}
+
+/**
+ * Pause habit timer
+ * Sets status back to idle and stops timer
+ */
+window.pauseHabit = async function(habitId) {
+    try {
+        // Stop local timer first
+        if (activeTimers[habitId]) {
+            clearInterval(activeTimers[habitId].intervalId);
+            delete activeTimers[habitId];
+        }
+        
+        // Call backend to reset habit status
+        const response = await fetch(`${API_URL}/${habitId}/pause`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await loadHabits();
+            displayHabits();
+            showMessage('⏸️ Timer paused', 'info');
+        } else {
+            showMessage(data.message || 'Failed to pause habit', 'error');
+        }
+    } catch (error) {
+        console.error('Error pausing habit:', error);
+        showMessage('Failed to pause habit', 'error');
+    }
+}
+
+/**
+ * Complete habit with time tracking and reflection
+ * Shows reflection modal before completion
+ */
+window.completeHabitWithTime = async function(habitId) {
+    try {
+        const habit = habits.find(h => h._id === habitId);
+        
+        // Calculate total elapsed time (current session + previously paused time)
+        let duration = habit?.pausedDuration || 0; // Start with accumulated time
+        
+        if (habit && habit.startedAt) {
+            const startTime = new Date(habit.startedAt).getTime();
+            const endTime = Date.now();
+            const currentSessionDuration = Math.floor((endTime - startTime) / 1000); // seconds
+            duration += currentSessionDuration; // Add current session to total
+        }
+        
+        // Check minimum duration requirement
+        if (habit && habit.minimumDuration) {
+            const requiredSeconds = habit.minimumDuration * 60;
+            if (duration < requiredSeconds) {
+                const remaining = Math.ceil((requiredSeconds - duration) / 60);
+                showMessage(`⏰ Please continue for ${remaining} more minute${remaining > 1 ? 's' : ''} to meet the minimum duration`, 'error');
+                return;
+            }
+        }
+        
+        // Show reflection modal before completing
+        showReflectionModal(habitId, duration);
+    } catch (error) {
+        console.error('Error completing habit:', error);
+        showMessage('Failed to complete habit', 'error');
+    }
+}
+
+/**
+ * Show reflection modal
+ * Requires user to reflect before marking habit as complete
+ */
+function showReflectionModal(habitId, duration) {
+    const modal = document.getElementById('reflection-modal');
+    const input = document.getElementById('reflection-input');
+    const charCount = document.getElementById('reflection-char-count');
+    const form = document.getElementById('reflection-form');
+    
+    // Clear previous input
+    input.value = '';
+    charCount.textContent = '0 characters';
+    charCount.style.color = '#64748b';
+    
+    // Update character count
+    input.addEventListener('input', () => {
+        const length = input.value.trim().length;
+        charCount.textContent = `${length} characters`;
+        charCount.style.color = length >= 5 ? '#10b981' : '#64748b';
+    });
+    
+    // Handle form submission
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const reflection = input.value.trim();
+        
+        if (reflection.length < 5) {
+            showMessage('Please write at least 5 characters in your reflection', 'error');
+            return;
+        }
+        
+        // Close modal and complete habit
+        modal.style.display = 'none';
+        await submitHabitCompletion(habitId, duration, reflection);
+    };
+    
+    // Show modal
+    modal.style.display = 'flex';
+    input.focus();
+}
+
+/**
+ * Close reflection modal
+ */
+window.closeReflectionModal = function() {
+    document.getElementById('reflection-modal').style.display = 'none';
+}
+
+/**
+ * Submit habit completion with reflection
+ */
+async function submitHabitCompletion(habitId, duration, reflection) {
+    try {
+        // Stop local timer
+        if (activeTimers[habitId]) {
+            clearInterval(activeTimers[habitId].intervalId);
+            delete activeTimers[habitId];
+        }
+        
+        // Complete the habit with duration and reflection
+        const response = await fetch(`${API_URL}/${habitId}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ duration, reflection })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await loadHabits();
+            updateQuickStats();
+            displayHabits();
+            refreshWeeklyProgress();
+            
+            const mins = Math.floor(duration / 60);
+            const secs = duration % 60;
+            showMessage(`🎉 ${data.message || 'Great job!'} (${mins}m ${secs}s)`, 'success');
+            
+            // Check if end-of-day honesty check should be shown
+            checkForHonestyReview();
+        } else {
+            showMessage(data.message || 'Failed to complete habit', 'error');
+        }
+    } catch (error) {
+        console.error('Error submitting habit completion:', error);
+        showMessage('Failed to complete habit', 'error');
+    }
+}
+
+/**
+ * Update timer display in real-time
+ * Shows notification when minimum duration is reached
+ */
+function updateTimerDisplay(habitId, startTime) {
+    const timerElement = document.getElementById(`timer-${habitId}`);
+    if (timerElement) {
+        const habit = habits.find(h => h._id === habitId);
+        const pausedDuration = habit?.pausedDuration || 0; // Get accumulated time
+        
+        const currentElapsed = Math.floor((Date.now() - startTime) / 1000);
+        const totalElapsed = pausedDuration + currentElapsed; // Total = paused + current
+        
+        const mins = Math.floor(totalElapsed / 60);
+        const secs = totalElapsed % 60;
+        timerElement.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        
+        // Check if minimum duration is reached
+        if (habit && habit.minimumDuration && activeTimers[habitId]) {
+            const requiredSeconds = habit.minimumDuration * 60;
+            
+            // Notify when minimum duration is reached (only once)
+            if (totalElapsed >= requiredSeconds && !activeTimers[habitId].notified) {
+                activeTimers[habitId].notified = true;
+                
+                // Play sound
+                if (notificationSound) {
+                    notificationSound.play().catch(e => console.warn('Could not play sound:', e));
+                }
+                
+                // Show visual notification
+                showMessage(`⏰ Minimum duration reached for "${habit.name}"! You can complete it now.`, 'success');
+                
+                // Flash the timer element
+                timerElement.style.animation = 'timerPulse 1s ease-in-out 3';
+                setTimeout(() => {
+                    timerElement.style.animation = '';
+                }, 3000);
+            }
+        }
+    }
+}
+
+/**
+ * Delete habit
+ */
+window.deleteHabit = async function(habitId) {
+    if (!confirm('Are you sure you want to delete this habit?')) return;
     
     try {
         const response = await fetch(`${API_URL}/${habitId}`, {
@@ -629,579 +575,455 @@ async function deleteHabit(habitId) {
         
         if (data.success) {
             await loadHabits();
+            updateQuickStats();
             displayHabits();
-            showMessage('Habit deleted', 'info');
+            showMessage('Habit deleted', 'success');
         }
     } catch (error) {
         console.error('Error deleting habit:', error);
-        alert('Failed to delete habit.');
     }
 }
 
-// ========== Analytics ==========
+// ========== UI Functions ==========
 
 /**
- * Update quick stats on add habit page
+ * Display all habits
  */
-async function updateQuickStats() {
-    await loadHabits();
+function displayHabits() {
+    const container = document.getElementById('habits-container');
+    if (!container) return;
     
-    const totalHabits = habits.length;
+    if (habits.length === 0) {
+        container.innerHTML = '<p class="empty-state">No habits yet. Add one to get started! 🌱</p>';
+        return;
+    }
+    
+    container.innerHTML = habits.map(habit => createHabitElement(habit)).join('');
+}
+
+/**
+ * Create habit HTML element with completion status and timestamp
+ */
+function createHabitElement(habit) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEntry = habit.completionHistory?.find(entry => {
+        const d = new Date(entry.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+    });
+    const isCompletedToday = todayEntry && todayEntry.status === 'completed';
+    
+    const frequencyText = habit.daysPerWeek === 7 ? 'Daily' : `${habit.daysPerWeek} days/week`;
+    
+    // Format completion time if completed today
+    let completionInfo = '';
+    if (isCompletedToday && habit.completedAt) {
+        const completedTime = new Date(habit.completedAt);
+        const timeStr = completedTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        completionInfo = `<div class="completion-timestamp">✅ Completed at ${timeStr}</div>`;
+    }
+    
+    // Calculate elapsed time if in progress
+    let elapsedTime = 0;
+    let timerDisplay = '';
+    if (habit.status === 'in-progress' && habit.startedAt) {
+        const pausedDuration = habit.pausedDuration || 0; // Previously accumulated time
+        const startTime = new Date(habit.startedAt).getTime();
+        const currentTime = activeTimers[habit._id] ? Date.now() : startTime;
+        const currentElapsed = Math.floor((currentTime - startTime) / 1000); // seconds
+        elapsedTime = pausedDuration + currentElapsed; // Total = paused + current
+    }
+    
+    // Show status badge and timer
+    let statusBadge = '';
+    if (habit.status === 'completed') {
+        statusBadge = '<span class="status-badge status-completed">✅ Completed</span>';
+        // Show duration if stored
+        if (todayEntry && todayEntry.duration) {
+            const mins = Math.floor(todayEntry.duration / 60);
+            const secs = todayEntry.duration % 60;
+            timerDisplay = `<div class="duration-display">⏱️ ${mins}m ${secs}s</div>`;
+        }
+    } else if (habit.status === 'in-progress') {
+        statusBadge = '<span class="status-badge status-in-progress">⏱️ In Progress</span>';
+        const mins = Math.floor(elapsedTime / 60);
+        const secs = elapsedTime % 60;
+        timerDisplay = `<div class="timer-display" id="timer-${habit._id}">${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</div>`;
+    }
+    
+    return `
+        <div class="habit-card ${isCompletedToday ? 'completed-today' : ''}" data-habit-id="${habit._id}">
+            <div class="habit-header">
+                <h3 class="habit-name">${habit.name}</h3>
+                <span class="habit-category">${habit.category || 'general'}</span>
+            </div>
+            ${habit.description ? `<p class="habit-description">${habit.description}</p>` : ''}
+            ${statusBadge}
+            ${timerDisplay}
+            ${completionInfo}
+            ${habit.minimumDuration ? `<div class="minimum-duration">⏰ Min: ${habit.minimumDuration} minutes</div>` : ''}
+            <div class="habit-stats">
+                <span class="streak">🔥 ${habit.streak || 0} day streak</span>
+                <span class="frequency">${frequencyText}</span>
+            </div>
+            <div class="habit-actions">
+                ${habit.status === 'idle' ? `
+                    <button class="btn-start" onclick="startHabit('${habit._id}')">▶️ Start</button>
+                ` : ''}
+                ${habit.status === 'in-progress' ? `
+                    <button class="btn-pause" onclick="pauseHabit('${habit._id}')">⏸️ Pause</button>
+                    <button class="btn-complete" onclick="completeHabitWithTime('${habit._id}')">✓ Complete</button>
+                ` : ''}
+                ${habit.status === 'completed' ? `
+                    <button class="btn-uncomplete" onclick="toggleToday('${habit._id}', false)">↺ Undo</button>
+                ` : ''}
+                <button class="btn-delete" onclick="deleteHabit('${habit._id}')">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Update quick stats
+ */
+function updateQuickStats() {
+    document.getElementById('total-habits').textContent = habits.length;
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    let activeToday = 0;
-    let longestStreak = 0;
-    
-    habits.forEach(habit => {
-        const todayEntry = habit.completionHistory?.find(entry => {
-            const d = new Date(entry.date);
+    const completedToday = habits.filter(habit => {
+        const entry = habit.completionHistory?.find(e => {
+            const d = new Date(e.date);
             d.setHours(0, 0, 0, 0);
             return d.getTime() === today.getTime();
         });
-        
-        if (todayEntry && todayEntry.status === 'completed') {
-            activeToday++;
-        }
-        
-        if (habit.streak > longestStreak) {
-            longestStreak = habit.streak;
-        }
-    });
+        return entry && entry.status === 'completed';
+    }).length;
     
-    document.getElementById('total-habits').textContent = totalHabits;
-    document.getElementById('active-today').textContent = activeToday;
+    document.getElementById('active-today').textContent = completedToday;
+    
+    const longestStreak = Math.max(...habits.map(h => h.streak || 0), 0);
     document.getElementById('longest-streak').textContent = longestStreak;
 }
 
 /**
- * Load and display analytics
+ * Show message notification
  */
+function showMessage(message, type) {
+    // Simple alert for now
+    const msg = document.createElement('div');
+    msg.className = `message message-${type}`;
+    msg.textContent = message;
+    msg.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;background:#4ade80;color:white;border-radius:8px;z-index:9999;';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+}
+
+// ========== Analytics Functions ==========
+
 async function loadAnalytics() {
     try {
-        const response = await fetch(`${API_URL}/analytics/daily`);
-        const data = await response.json();
+        const [dailyResponse, weeklyResponse] = await Promise.all([
+            fetch(`${API_URL}/analytics/daily`),
+            fetch(`${API_URL}/analytics/weekly`)
+        ]);
         
-        if (data.success) {
-            displayDailyAnalytics(data.data);
+        const dailyResult = await dailyResponse.json();
+        const weeklyResult = await weeklyResponse.json();
+        
+        if (dailyResult.success && dailyResult.data) {
+            updateDailyStats(dailyResult.data);
+            createDailyChart(dailyResult.data);
+            createCategoryChart(dailyResult.data);
         }
         
-        // Load weekly overview chart
-        await renderWeeklyOverviewChart();
+        if (weeklyResult.success && weeklyResult.data) {
+            createWeeklyOverviewChart(weeklyResult.data);
+        }
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
 }
 
-/**
- * Render weekly overview chart - all habits combined
- */
-async function renderWeeklyOverviewChart() {
-    const ctx = document.getElementById('weeklyOverviewChart');
-    if (!ctx) return;
+function updateDailyStats(data) {
+    const total = data.completed + data.skipped + data.notDone;
+    document.getElementById('completed-count').textContent = data.completed;
+    document.getElementById('skipped-count').textContent = data.skipped;
+    document.getElementById('notdone-count').textContent = data.notDone;
     
-    // Destroy existing chart
-    if (weeklyOverviewChart) {
-        weeklyOverviewChart.destroy();
-    }
-    
-    // Get current week's data
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const completedData = [];
-    const skippedData = [];
-    const missedData = [];
-    
-    // Aggregate data for each day of the week
-    for (let i = 0; i < 7; i++) {
-        const checkDate = new Date(weekStart);
-        checkDate.setDate(weekStart.getDate() + i);
-        
-        // Don't count future days
-        if (checkDate > today) {
-            completedData.push(0);
-            skippedData.push(0);
-            missedData.push(0);
-            continue;
-        }
-        
-        let dayCompleted = 0;
-        let daySkipped = 0;
-        let dayMissed = 0;
-        
-        habits.forEach(habit => {
-            // Check if this day should be tracked (not a skip day)
-            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
-            const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
-            
-            if (!shouldSkip) {
-                // Find entry for this date
-                const entry = habit.completionHistory?.find(e => {
-                    const d = new Date(e.date);
-                    d.setHours(0, 0, 0, 0);
-                    return d.getTime() === checkDate.getTime();
-                });
-                
-                if (entry) {
-                    if (entry.status === 'completed') {
-                        dayCompleted++;
-                    } else if (entry.status === 'skipped') {
-                        daySkipped++;
-                    } else {
-                        dayMissed++;
-                    }
-                } else {
-                    dayMissed++;
-                }
-            }
-        });
-        
-        completedData.push(dayCompleted);
-        skippedData.push(daySkipped);
-        missedData.push(dayMissed);
-    }
-    
-    weeklyOverviewChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: dayLabels,
-            datasets: [
-                {
-                    label: 'Completed',
-                    data: completedData,
-                    backgroundColor: 'rgba(74, 222, 128, 0.8)',
-                    borderColor: 'rgb(34, 197, 94)',
-                    borderWidth: 2,
-                    borderRadius: 8
-                },
-                {
-                    label: 'Skipped',
-                    data: skippedData,
-                    backgroundColor: 'rgba(251, 191, 36, 0.8)',
-                    borderColor: 'rgb(245, 158, 11)',
-                    borderWidth: 2,
-                    borderRadius: 8
-                },
-                {
-                    label: 'Missed',
-                    data: missedData,
-                    backgroundColor: 'rgba(252, 165, 165, 0.8)',
-                    borderColor: 'rgb(239, 68, 68)',
-                    borderWidth: 2,
-                    borderRadius: 8
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    stacked: true,
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        callback: function(value) {
-                            return Number.isInteger(value) ? value : '';
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Number of Habits'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom',
-                    labels: {
-                        padding: 15,
-                        font: {
-                            size: 12,
-                            weight: '600'
-                        },
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
-                },
-                title: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        footer: function(tooltipItems) {
-                            let total = 0;
-                            tooltipItems.forEach(item => {
-                                total += item.parsed.y;
-                            });
-                            return 'Total: ' + total + ' habits';
-                        }
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            }
-        }
-    });
-}
-
-/**
- * Display daily analytics
- */
-function displayDailyAnalytics(analytics) {
-    const { completed, skipped, notDone, total, completionRate, categoryStats } = analytics;
-    
-    // Update status breakdown
-    document.getElementById('completed-count').textContent = completed;
     document.getElementById('completed-percentage').textContent = 
-        `${total > 0 ? Math.round((completed / total) * 100) : 0}%`;
-    
-    document.getElementById('skipped-count').textContent = skipped;
+        total > 0 ? `${Math.round((data.completed / total) * 100)}%` : '0%';
     document.getElementById('skipped-percentage').textContent = 
-        `${total > 0 ? Math.round((skipped / total) * 100) : 0}%`;
-    
-    document.getElementById('notdone-count').textContent = notDone;
+        total > 0 ? `${Math.round((data.skipped / total) * 100)}%` : '0%';
     document.getElementById('notdone-percentage').textContent = 
-        `${total > 0 ? Math.round((notDone / total) * 100) : 0}%`;
-    
-    // Render daily completion chart (doughnut)
-    renderDailyCompletionChart(completed, notDone, total);
-    
-    // Render category chart (bar)
-    renderCategoryChart(categoryStats);
+        total > 0 ? `${Math.round((data.notDone / total) * 100)}%` : '0%';
 }
 
-/**
- * Render daily completion chart
- */
-function renderDailyCompletionChart(completed, notDone, total) {
+function createDailyChart(data) {
     const ctx = document.getElementById('dailyCompletionChart');
     if (!ctx) return;
     
-    // Destroy existing chart
-    if (dailyChart) {
-        dailyChart.destroy();
-    }
+    if (dailyChart) dailyChart.destroy();
     
     dailyChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Completed', 'Not Done'],
+            labels: ['Completed', 'Skipped', 'Not Done'],
             datasets: [{
-                data: [completed, notDone],
-                backgroundColor: [
-                    'rgb(34, 197, 94)',
-                    'rgb(156, 163, 175)'
-                ],
-                borderWidth: 0
+                data: [data.completed, data.skipped, data.notDone],
+                backgroundColor: ['#4ade80', '#fbbf24', '#f87171'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
-                    position: 'bottom'
-                },
-                title: {
-                    display: true,
-                    text: `${total > 0 ? Math.round((completed / total) * 100) : 0}% Complete Today`
-                }
-            }
-        }
-    });
-}
-
-/**
- * Render category chart
- */
-function renderCategoryChart(categoryStats) {
-    const ctx = document.getElementById('categoryChart');
-    if (!ctx) return;
-    
-    // Destroy existing chart
-    if (categoryChart) {
-        categoryChart.destroy();
-    }
-    
-    const categories = Object.keys(categoryStats);
-    const completionRates = categories.map(cat => {
-        const { completed, total } = categoryStats[cat];
-        return total > 0 ? Math.round((completed / total) * 100) : 0;
-    });
-    
-    categoryChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
-            datasets: [{
-                label: 'Completion Rate (%)',
-                data: completionRates,
-                backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                borderColor: 'rgb(59, 130, 246)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 14,
+                            weight: 'bold'
                         }
                     }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Category Performance'
-                }
-            }
-        }
-    });
-}
-
-// ========== Weekly Progress ==========
-
-/**
- * Load and display weekly progress
- */
-async function loadWeeklyProgress() {
-    try {
-        const response = await fetch(`${API_URL}/analytics/weekly`);
-        const data = await response.json();
-        
-        if (data.success) {
-            displayWeeklyProgress(data.data);
-        }
-    } catch (error) {
-        console.error('Error loading weekly progress:', error);
-    }
-}
-
-/**
- * Refresh weekly progress if on that page
- */
-function refreshWeeklyProgress() {
-    const weeklyPage = document.getElementById('page-weekly-progress');
-    if (weeklyPage && weeklyPage.classList.contains('active')) {
-        loadWeeklyProgress();
-    }
-}
-
-/**
- * Refresh weekly progress if on that page
- */
-function refreshWeeklyProgress() {
-    const weeklyPage = document.getElementById('page-weekly-progress');
-    if (weeklyPage && weeklyPage.classList.contains('active')) {
-        loadWeeklyProgress();
-    }
-}
-
-/**
- * Display weekly progress for all habits
- */
-function displayWeeklyProgress(weeklyData) {
-    const container = document.getElementById('weekly-progress-container');
-    if (!container) return;
-    
-    if (weeklyData.length === 0) {
-        container.innerHTML = '<p class="no-habits">No habits to show. Add habits to see weekly progress.</p>';
-        return;
-    }
-    
-    container.innerHTML = '';
-    weeklyData.forEach(habit => {
-        const card = createWeeklyHabitCard(habit);
-        container.appendChild(card);
-    });
-}
-
-/**
- * Create weekly habit card with chart
- */
-function createWeeklyHabitCard(habit) {
-    const card = document.createElement('div');
-    card.className = 'weekly-habit-card';
-    card.setAttribute('data-habit-id', habit._id);
-    
-    // Calculate consistency percentage based on daysPerWeek target
-    const targetDays = habit.daysPerWeek || 7;
-    const completedDays = habit.completed;
-    const skippedDays = habit.skipped;
-    const totalDone = completedDays + skippedDays; // Skipped counts as done
-    const consistencyPercentage = Math.round((totalDone / targetDays) * 100);
-    
-    // Calculate allowed skips (7 - targetDays)
-    const allowedSkips = 7 - targetDays;
-    
-    // Determine consistency status color
-    let consistencyClass = 'low';
-    if (consistencyPercentage >= 90) consistencyClass = 'excellent';
-    else if (consistencyPercentage >= 75) consistencyClass = 'good';
-    else if (consistencyPercentage >= 50) consistencyClass = 'moderate';
-    
-    card.innerHTML = `
-        <div class="weekly-card-header">
-            <div class="habit-info">
-                <h3>${habit.name}</h3>
-                <div class="habit-tags">
-                    ${habit.category ? `<span class="category-tag">${habit.category}</span>` : ''}
-                    <span class="frequency-tag">${targetDays} days/week</span>
-                </div>
-            </div>
-            <div class="consistency-circle ${consistencyClass}">
-                <svg viewBox="0 0 100 100">
-                    <circle class="circle-bg" cx="50" cy="50" r="40"></circle>
-                    <circle class="circle-progress" cx="50" cy="50" r="40" 
-                        style="stroke-dashoffset: ${251.2 - (251.2 * consistencyPercentage) / 100};"></circle>
-                </svg>
-                <div class="consistency-text">
-                    <div class="percentage">${consistencyPercentage}%</div>
-                    <div class="label">Consistency</div>
-                </div>
-            </div>
-        </div>
-        <div class="weekly-stats">
-            <div class="stat-item">
-                <span class="stat-icon">✅</span>
-                <div>
-                    <span class="stat-label">Completed</span>
-                    <span class="stat-value">${completedDays}/${targetDays}</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-icon">⏭️</span>
-                <div>
-                    <span class="stat-label">Skipped</span>
-                    <span class="stat-value">${skippedDays}/${allowedSkips}</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-icon">🔥</span>
-                <div>
-                    <span class="stat-label">Current Streak</span>
-                    <span class="stat-value">${habit.streak}</span>
-                </div>
-            </div>
-        </div>
-        <div class="weekly-chart-container">
-            <canvas id="weekly-chart-${habit._id}"></canvas>
-        </div>
-    `;
-    
-    // Render chart after card is added to DOM
-    setTimeout(() => {
-        renderWeeklyChart(habit);
-    }, 100);
-    
-    return card;
-}
-
-/**
- * Render weekly progress chart for a habit
- */
-function renderWeeklyChart(habit) {
-    const ctx = document.getElementById(`weekly-chart-${habit._id}`);
-    if (!ctx) return;
-    
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const completionData = habit.weekStatus.map(day => {
-        if (day.status === 'completed') return 100;
-        if (day.status === 'skipped') return 50;
-        return 0;
-    });
-    
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: days,
-            datasets: [{
-                label: 'Completion',
-                data: completionData,
-                borderColor: 'rgb(102, 126, 234)',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: habit.weekStatus.map(day => {
-                    if (day.status === 'completed') return 'rgb(34, 197, 94)'; // Green
-                    if (day.status === 'skipped') return 'rgb(234, 179, 8)'; // Yellow
-                    return 'rgb(239, 68, 68)'; // Red
-                }),
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 8,
-                pointHoverRadius: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                duration: 1000,
-                easing: 'easeOutCubic'
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        display: false
-                    },
-                    grid: {
-                        display: false
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     padding: 12,
                     titleFont: {
-                        size: 13,
-                        weight: '600'
+                        size: 14
                     },
                     bodyFont: {
-                        size: 12
+                        size: 13
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createCategoryChart(data) {
+    const ctx = document.getElementById('categoryChart');
+    if (!ctx) return;
+    
+    if (categoryChart) categoryChart.destroy();
+    
+    const categories = Object.keys(data.categoryStats || {});
+    const completedData = categories.map(cat => data.categoryStats[cat].completed);
+    const totalData = categories.map(cat => data.categoryStats[cat].total);
+    
+    categoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: categories.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1)),
+            datasets: [
+                {
+                    label: 'Completed',
+                    data: completedData,
+                    backgroundColor: '#4ade80',
+                    borderRadius: 8,
+                    borderWidth: 2,
+                    borderColor: '#22c55e'
+                },
+                {
+                    label: 'Total',
+                    data: totalData,
+                    backgroundColor: '#cbd5e1',
+                    borderRadius: 8,
+                    borderWidth: 2,
+                    borderColor: '#94a3b8'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
                     },
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: 1,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createWeeklyOverviewChart(weeklyData) {
+    const ctx = document.getElementById('weeklyOverviewChart');
+    if (!ctx) return;
+    
+    if (weeklyOverviewChart) weeklyOverviewChart.destroy();
+    
+    // Calculate daily totals across all habits
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const dailyTotals = [];
+    const labels = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        
+        let completedCount = 0;
+        let totalHabits = 0;
+        
+        weeklyData.forEach(habit => {
+            totalHabits++;
+            const dayStatus = habit.weekStatus.find(day => {
+                const dayDate = new Date(day.date);
+                dayDate.setHours(0, 0, 0, 0);
+                return dayDate.getTime() === date.getTime();
+            });
+            
+            if (dayStatus && (dayStatus.status === 'completed' || dayStatus.status === 'skipped')) {
+                completedCount++;
+            }
+        });
+        
+        const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;
+        dailyTotals.push(percentage);
+        
+        const dayName = days[date.getDay()];
+        const isToday = date.toDateString() === today.toDateString();
+        labels.push(isToday ? `${dayName} (Today)` : dayName);
+    }
+    
+    weeklyOverviewChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: dailyTotals,
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: '#7c3aed',
+                pointHoverBorderColor: '#ffffff',
+                pointHoverBorderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        stepSize: 25,
+                        callback: function(value) {
+                            return value + '%';
+                        },
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
                     callbacks: {
                         label: function(context) {
-                            const status = habit.weekStatus[context.dataIndex].status;
-                            if (status === 'completed') return '✅ Completed';
-                            if (status === 'skipped') return '⏭️ Skipped';
-                            return '❌ Missed';
+                            return `Completion: ${context.parsed.y}%`;
                         }
                     }
                 }
@@ -1210,824 +1032,542 @@ function renderWeeklyChart(habit) {
     });
 }
 
-// ========== Utility Functions ==========
-
-// Store current user data
-let currentUserData = null;
-
+// ========== Weekly Progress Functions ==========
 /**
- * Load and display user profile
+ * WEEKLY PROGRESS SYSTEM - 7-DAY GRAPH VISUALIZATION
+ * 
+ * PURPOSE:
+ * Display a visual 7-day graph for each habit showing completion patterns
+ * 
+ * STATE SYSTEM (3 states per day):
+ * 1. COMPLETED (green ●) - Habit was done, extends streak
+ * 2. SKIPPED (yellow ●) - Intentionally skipped, maintains streak, max 1/week
+ * 3. MISSED (red ●) - No entry, breaks streak
+ * 
+ * SKIP RULES:
+ * - Maximum 1 skip per week (enforced by model)
+ * - Cannot skip consecutive days (enforced by model)
+ * - Skipped days maintain streak (don't break it)
+ * - Only missed days break streaks
+ * 
+ * ACTIVE DAYS CALCULATION:
+ * - Active days = completed + skipped
+ * - Both completed and skipped count as "maintaining the habit"
+ * - Missed days don't count as active
+ * 
+ * GRAPH RENDERING:
+ * - Always shows 7 consecutive days (Sunday to Saturday) ending today
+ * - Each day gets a colored dot based on its state
+ * - Progress bar shows completion rate (completed / total 7 days)
+ * - Legend explains the color meanings
+ * - Updates automatically when habit state changes via refreshWeeklyProgress()
+ * 
+ * UI SYNC:
+ * - loadWeeklyProgress() regenerates all cards from current habits data
+ * - Called when: page loads, user switches to weekly page, habit state changes
+ * - Ensures graphs always reflect database state
  */
-async function loadProfile() {
-    const loadingDiv = document.querySelector('.profile-loading');
-    const contentDiv = document.querySelector('.profile-content');
+
+async function loadWeeklyProgress() {
+    const container = document.getElementById('weekly-progress-container');
+    if (!container) return;
     
-    try {
-        const response = await fetch('/auth/profile');
-        const data = await response.json();
-        
-        if (data.success && data.user) {
-            currentUserData = data.user;
-            updateProfileDisplay(data.user);
-            updateNavProfileIcon(data.user);
-            
-            // Load profile statistics
-            await loadProfileStats();
-            
-            // Update badges and achievements
-            updateBadges();
-            updateAchievements();
-            
-            // Show content, hide loading
-            loadingDiv.style.display = 'none';
-            contentDiv.style.display = 'block';
-        } else {
-            throw new Error('Failed to load profile');
-        }
-    } catch (error) {
-        console.error('Profile load error:', error);
-        loadingDiv.innerHTML = '<p class="error-text">❌ Failed to load profile. Please try again.</p>';
+    if (habits.length === 0) {
+        container.innerHTML = '<p class="empty-state">No habits to show weekly progress for.</p>';
+        return;
     }
+    
+    container.innerHTML = habits.map(habit => createWeeklyProgressCard(habit)).join('');
 }
 
 /**
- * Load profile statistics
+ * Create weekly progress card for a habit with 7-day graph
+ * 
+ * VISUALIZATION RULES:
+ * - Green dot (●) = completed day
+ * - Yellow dot (●) = skipped day (intentional, maintains streak)
+ * - Red dot (●) = missed day (no entry, breaks streak)
+ * - 7 days always shown (Sunday to Saturday)
+ * 
+ * ACTIVE DAYS CALCULATION:
+ * - Active days = completed + skipped (both maintain habit consistency)
+ * - Missed days = days with no entry at all
+ * - Progress bar shows: completed days / total days
+ * 
+ * GRAPH RENDERING:
+ * - Always renders 7 consecutive days ending today
+ * - Each day shows status with color-coded dot
+ * - Legend explains color meanings
+ * - Updates when habit state changes (via loadWeeklyProgress)
  */
-async function loadProfileStats() {
-    try {
-        // Get all habits
-        await loadHabits();
+function createWeeklyProgressCard(habit) {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate weekly stats for 7 consecutive days ending today
+    let completedCount = 0;
+    let skippedCount = 0;
+    let missedCount = 0;
+    
+    const weekData = [];
+    
+    // Debug: Log the habit and its completion history
+    console.log(`[Weekly Progress] Creating card for: ${habit.name}`);
+    console.log('[Weekly Progress] Completion History:', habit.completionHistory);
+    
+    // Generate 7 days (Sunday to Saturday) ending today
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
         
-        // Calculate statistics
-        const totalHabits = habits.length;
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+        const dayNameLower = dayNames[dayOfWeek].toLowerCase();
         
-        // Count completed today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        let completedToday = 0;
-        let currentStreak = 0;
-        let bestStreak = 0;
+        // Check if this day is a designated rest day (skipDays)
+        const isRestDay = habit.skipDays && habit.skipDays.includes(dayNameLower);
         
-        habits.forEach(habit => {
-            // Check if completed today
-            const todayEntry = habit.completionHistory?.find(entry => {
-                const d = new Date(entry.date);
-                d.setHours(0, 0, 0, 0);
-                return d.getTime() === today.getTime();
-            });
-            
-            if (todayEntry && todayEntry.status === 'completed') {
-                completedToday++;
-            }
-            
-            // Track best streak
-            if (habit.streak > bestStreak) {
-                bestStreak = habit.streak;
-            }
-            
-            // Calculate average current streak
-            currentStreak += habit.streak;
+        // Check completionHistory for this date
+        const entry = habit.completionHistory?.find(e => {
+            const d = new Date(e.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === date.getTime();
         });
         
-        currentStreak = totalHabits > 0 ? Math.round(currentStreak / totalHabits) : 0;
+        // Determine status and visualization
+        let status = 'missed';        // Default: no entry = missed
+        let statusClass = 'missed';   // CSS class for styling
+        let statusIcon = '●';         // Solid dot for all states
+        let statusColor = '#ef4444';  // Red for missed
         
-        // Calculate weekly completion rate
-        const weeklyCompletion = await calculateWeeklyCompletion();
-        
-        // Calculate days since joining
-        const daysActive = currentUserData ? 
-            Math.floor((new Date() - new Date(currentUserData.createdAt)) / (1000 * 60 * 60 * 24)) : 0;
-        
-        // Update stats display
-        document.getElementById('stat-total-habits').textContent = totalHabits;
-        document.getElementById('stat-completed-today').textContent = completedToday;
-        document.getElementById('stat-current-streak').textContent = currentStreak;
-        document.getElementById('stat-best-streak').textContent = bestStreak;
-        document.getElementById('stat-weekly-completion').textContent = weeklyCompletion + '%';
-        document.getElementById('stat-days-active').textContent = daysActive;
-        
-    } catch (error) {
-        console.error('Error loading profile stats:', error);
-    }
-}
-
-/**
- * Calculate weekly completion percentage
- */
-async function calculateWeeklyCompletion() {
-    if (habits.length === 0) return 0;
-    
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
-    weekStart.setHours(0, 0, 0, 0);
-    
-    let totalRequired = 0;
-    let totalCompleted = 0;
-    
-    habits.forEach(habit => {
-        // Count days in this week
-        for (let i = 0; i < 7; i++) {
-            const checkDate = new Date(weekStart);
-            checkDate.setDate(weekStart.getDate() + i);
+        if (entry) {
+            // Debug: Log entry details
+            console.log(`[Weekly Progress] ${habit.name} - ${dayNames[dayOfWeek]}:`, {
+                date: date.toISOString(),
+                status: entry.status,
+                isRestDay,
+                entry: entry
+            });
             
-            // Only count up to today
-            if (checkDate > today) break;
-            
-            // Check if this day should be tracked (not a skip day)
-            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
-            const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
-            
-            if (!shouldSkip) {
-                totalRequired++;
-                
-                // Check if completed
-                const entry = habit.completionHistory?.find(e => {
-                    const d = new Date(e.date);
-                    d.setHours(0, 0, 0, 0);
-                    return d.getTime() === checkDate.getTime();
-                });
-                
-                if (entry && entry.status === 'completed') {
-                    totalCompleted++;
-                }
+            if (entry.status === 'completed') {
+                // STATE 1: COMPLETED (green)
+                status = 'completed';
+                statusClass = 'completed';
+                statusColor = '#22c55e';  // Green
+                completedCount++;
+            } else if (entry.status === 'skipped') {
+                // STATE 2: SKIPPED (yellow) - maintains streak
+                status = 'skipped';
+                statusClass = 'skipped';
+                statusColor = '#eab308';  // Yellow
+                skippedCount++;
+            } else {
+                // STATE 3: Other status treated as missed
+                missedCount++;
+            }
+        } else {
+            // No entry - check if it's a rest day
+            if (isRestDay) {
+                // STATE 4: REST DAY (gray) - not supposed to do habit
+                status = 'rest';
+                statusClass = 'rest';
+                statusColor = '#9ca3af';  // Gray
+                statusIcon = '○';  // Hollow dot for rest days
+            } else {
+                // STATE 3: MISSED (red) - no entry, breaks streak
+                missedCount++;
             }
         }
-    });
-    
-    return totalRequired > 0 ? Math.round((totalCompleted / totalRequired) * 100) : 0;
-}
-
-/**
- * Initialize and display badge system
- */
-function updateBadges() {
-    const badgesMilestones = [
-        { days: 7, icon: '🌟', name: 'Week Warrior', color: 'badge-7' },
-        { days: 21, icon: '💎', name: 'Habit Builder', color: 'badge-21' },
-        { days: 30, icon: '🎯', name: 'Month Master', color: 'badge-30' },
-        { days: 50, icon: '🔥', name: 'Streak Legend', color: 'badge-50' },
-        { days: 100, icon: '👑', name: 'Century Champion', color: 'badge-100' }
-    ];
-    
-    // Get best streak from habits
-    let bestStreak = 0;
-    habits.forEach(habit => {
-        if (habit.streak > bestStreak) {
-            bestStreak = habit.streak;
-        }
-    });
-    
-    const badgesContainer = document.getElementById('badges-container');
-    badgesContainer.innerHTML = '';
-    
-    // Check for newly unlocked badges
-    const previousBadges = JSON.parse(localStorage.getItem('unlockedBadges') || '[]');
-    const currentUnlocked = [];
-    
-    badgesMilestones.forEach(badge => {
-        const isUnlocked = bestStreak >= badge.days;
-        const wasJustUnlocked = isUnlocked && !previousBadges.includes(badge.days);
         
-        if (isUnlocked) {
-            currentUnlocked.push(badge.days);
-        }
+        const isToday = date.toDateString() === today.toDateString();
+        const dayName = dayNames[dayOfWeek];
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
         
-        const badgeItem = document.createElement('div');
-        badgeItem.className = `badge-item ${isUnlocked ? 'badge-unlocked' : 'badge-locked'} ${badge.color} ${wasJustUnlocked ? 'badge-just-unlocked' : ''}`;
-        
-        badgeItem.innerHTML = `
-            <div class="badge-circle">
-                <div class="badge-icon">${badge.icon}</div>
-                ${!isUnlocked ? '<div class="badge-lock">🔒</div>' : ''}
-            </div>
-            <div class="badge-info">
-                <div class="badge-name">${badge.name}</div>
-                <div class="badge-days">${badge.days} Day${badge.days > 1 ? 's' : ''}</div>
-                <div class="badge-status">
-                    ${isUnlocked ? '✓ Earned' : 'Locked'}
+        weekData.push({
+            dayName,
+            dateStr,
+            isToday,
+            statusClass,
+            status,
+            statusIcon,
+            statusColor
+        });
+    }
+    
+    // Calculate metrics
+    // Active days = completed + skipped (both maintain consistency)
+    const activeDays = completedCount + skippedCount;
+    // Completion rate based on total 7 days
+    const completionRate = Math.round((completedCount / 7) * 100);
+    
+    // Build HTML with graph
+    let html = `
+        <div class="weekly-card">
+            <div class="weekly-card-header">
+                <div>
+                    <h3 class="weekly-habit-name">${habit.name}</h3>
+                    <p class="weekly-habit-schedule">7-day tracking (Sunday - Saturday)</p>
+                </div>
+                <div class="weekly-stats-mini">
+                    <span class="stat-mini completed" title="Completed">
+                        <span class="stat-dot" style="background: #22c55e;">●</span>
+                        ${completedCount}
+                    </span>
+                    <span class="stat-mini skipped" title="Skipped">
+                        <span class="stat-dot" style="background: #eab308;">●</span>
+                        ${skippedCount}
+                    </span>
+                    <span class="stat-mini missed" title="Missed">
+                        <span class="stat-dot" style="background: #ef4444;">●</span>
+                        ${missedCount}
+                    </span>
                 </div>
             </div>
+            
+            <!-- Progress Bar (Completion Rate) -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-label">
+                    <span>Completion Rate</span>
+                    <span class="progress-percentage">${completionRate}%</span>
+                </div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" style="width: ${completionRate}%; background: linear-gradient(90deg, #22c55e, #4ade80, #86efac);"></div>
+                </div>
+            </div>
+            
+            <!-- 7-Day Visual Graph -->
+            <div class="weekly-grid">
+    `;
+    
+    // Render each day in the 7-day graph
+    weekData.forEach(day => {
+        const todayClass = day.isToday ? 'today' : '';
+        
+        html += `
+            <div class="day-cell ${day.statusClass} ${todayClass}">
+                <div class="day-label">${day.dayName.substring(0, 3)}</div>
+                <div class="day-date">${day.dateStr}</div>
+                <div class="day-status-icon" style="color: ${day.statusColor}; font-size: 2.5rem; line-height: 1;">${day.statusIcon}</div>
+                ${day.isToday ? '<div class="today-badge">Today</div>' : ''}
+            </div>
         `;
-        
-        // Add tooltip
-        if (isUnlocked) {
-            badgeItem.title = `🎉 Earned on reaching ${badge.days}-day streak!`;
-        } else {
-            const daysNeeded = badge.days - bestStreak;
-            badgeItem.title = `${daysNeeded} more day${daysNeeded > 1 ? 's' : ''} to unlock!`;
-        }
-        
-        badgesContainer.appendChild(badgeItem);
-        
-        // Show notification for newly unlocked badge
-        if (wasJustUnlocked) {
-            setTimeout(() => {
-                showBadgeUnlockNotification(badge);
-            }, 500);
-        }
     });
     
-    // Save current unlocked badges
-    localStorage.setItem('unlockedBadges', JSON.stringify(currentUnlocked));
-}
-
-/**
- * Show badge unlock notification
- */
-function showBadgeUnlockNotification(badge) {
-    // Create notification overlay
-    const notification = document.createElement('div');
-    notification.className = 'badge-unlock-notification';
-    notification.innerHTML = `
-        <div class="badge-unlock-content">
-            <div class="badge-unlock-icon">${badge.icon}</div>
-            <h2 class="badge-unlock-title">🎉 Badge Unlocked!</h2>
-            <p class="badge-unlock-name">${badge.name}</p>
-            <p class="badge-unlock-desc">${badge.days}-day streak achieved!</p>
-            <button class="btn-badge-close" onclick="this.parentElement.parentElement.remove()">Continue</button>
+    html += `
+            </div>
+            
+            <!-- Color Legend -->
+            <div class="weekly-legend">
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: #22c55e;">●</span>
+                    <span>Completed</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: #eab308;">●</span>
+                    <span>Skipped (Allowed)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: #9ca3af;">○</span>
+                    <span>Rest Day</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: #ef4444;">●</span>
+                    <span>Missed (Breaks Streak)</span>
+                </div>
+            </div>
+            
+            <!-- Streak & Active Days Info -->
+            <div class="weekly-streak-info">
+                <span class="streak-badge">🔥 ${habit.streak || 0} day streak</span>
+                <span class="completion-text">${activeDays} of 7 active days (completed + skipped)</span>
+            </div>
         </div>
     `;
     
-    notification.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        animation: fadeIn 0.3s ease-out;
-        backdrop-filter: blur(10px);
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        notification.style.animation = 'fadeOut 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
+    return html;
 }
 
 /**
- * Update achievements display
+ * Refresh weekly progress display
+ * 
+ * GRAPH RENDERING LOGIC:
+ * - Checks if weekly progress page is currently active
+ * - Reloads progress cards with updated habit data
+ * - Ensures graphs reflect latest completion/skip/missed states
+ * - Called after any habit state change (complete, skip, uncomplete)
+ * 
+ * This function maintains UI-data synchronization for the 7-day graphs
  */
-function updateAchievements() {
-    const achievements = [
-        {
-            id: 'first-habit',
-            icon: '🌱',
-            name: 'First Habit',
-            desc: 'Create your first habit',
-            unlocked: habits.length >= 1
-        },
-        {
-            id: 'streak-master',
-            icon: '⚡',
-            name: 'Streak Master',
-            desc: 'Maintain a 7-day streak',
-            unlocked: habits.some(h => h.streak >= 7)
-        },
-        {
-            id: 'dedicated',
-            icon: '💪',
-            name: 'Dedicated',
-            desc: 'Complete 30 habits',
-            unlocked: getTotalCompletions() >= 30
-        },
-        {
-            id: 'perfect-week',
-            icon: '🎯',
-            name: 'Perfect Week',
-            desc: 'Complete all habits for a week',
-            unlocked: checkPerfectWeek()
-        },
-        {
-            id: 'on-fire',
-            icon: '🔥',
-            name: 'On Fire!',
-            desc: '30-day streak achieved',
-            unlocked: habits.some(h => h.streak >= 30)
-        },
-        {
-            id: 'habit-king',
-            icon: '👑',
-            name: 'Habit King',
-            desc: 'Track 10+ habits',
-            unlocked: habits.length >= 10
-        }
-    ];
+function refreshWeeklyProgress() {
+    const weeklyPage = document.getElementById('page-weekly-progress');
+    if (weeklyPage && weeklyPage.classList.contains('active')) {
+        // Page is visible - reload the progress cards
+        loadWeeklyProgress();
+    }
+}
+
+// ========== Helper Functions ==========
+
+/**
+ * Update skip days preview
+ * Shows selected rest days in a readable format
+ */
+function updateSkipDaysPreview() {
+    const checkedBoxes = document.querySelectorAll('input[name="skip-specific-days"]:checked');
+    const preview = document.getElementById('selected-days-preview');
+    const list = document.getElementById('selected-days-list');
     
-    const achievementsGrid = document.getElementById('achievements-grid');
-    achievementsGrid.innerHTML = '';
+    if (checkedBoxes.length > 0) {
+        const days = Array.from(checkedBoxes).map(cb => {
+            return cb.value.charAt(0).toUpperCase() + cb.value.slice(1);
+        });
+        list.textContent = days.join(', ');
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// ========== Accountability & Honesty Check Functions ==========
+
+/**
+ * Check if honesty review should be shown
+ * Shows once per day after 9 PM
+ */
+function checkForHonestyReview() {
+    const now = new Date();
+    const hour = now.getHours();
     
-    achievements.forEach(achievement => {
-        const card = document.createElement('div');
-        card.className = `achievement-card ${achievement.unlocked ? 'achievement-unlocked' : 'achievement-locked'}`;
-        card.innerHTML = `
-            <div class="achievement-icon">${achievement.icon}</div>
-            <div class="achievement-name">${achievement.name}</div>
-            <div class="achievement-desc">${achievement.desc}</div>
+    // Only show after 9 PM
+    if (hour < 21) return;
+    
+    // Check if review was already done today
+    const lastCheck = localStorage.getItem('lastHonestyCheck');
+    const today = now.toDateString();
+    
+    if (lastCheck === today) return;
+    
+    // Get today's completed habits
+    const completedToday = habits.filter(habit => {
+        const todayEntry = habit.completionHistory?.find(entry => {
+            const d = new Date(entry.date);
+            d.setHours(0, 0, 0, 0);
+            const t = new Date();
+            t.setHours(0, 0, 0, 0);
+            return d.getTime() === t.getTime();
+        });
+        return todayEntry && todayEntry.status === 'completed';
+    });
+    
+    if (completedToday.length > 0) {
+        showHonestyCheckModal(completedToday);
+    }
+}
+
+/**
+ * Show honesty check modal
+ */
+function showHonestyCheckModal(completedHabits) {
+    const modal = document.getElementById('honesty-modal');
+    const list = document.getElementById('honesty-habits-list');
+    
+    // Build habits list
+    let html = '';
+    completedHabits.forEach(habit => {
+        html += `
+            <div class="honesty-habit-item" data-habit-id="${habit._id}">
+                <h3>${habit.name}</h3>
+                <p class="honesty-question">Do you feel this habit was completed honestly?</p>
+                <div class="honesty-options">
+                    <label class="honesty-option">
+                        <input type="radio" name="honesty-${habit._id}" value="yes" required>
+                        <span class="honesty-label">✅ Yes</span>
+                    </label>
+                    <label class="honesty-option">
+                        <input type="radio" name="honesty-${habit._id}" value="partially">
+                        <span class="honesty-label">⚠️ Partially</span>
+                    </label>
+                    <label class="honesty-option">
+                        <input type="radio" name="honesty-${habit._id}" value="not-really">
+                        <span class="honesty-label">❌ Not really</span>
+                    </label>
+                </div>
+            </div>
         `;
-        
-        if (achievement.unlocked) {
-            card.title = 'Achievement Unlocked! 🎉';
-        } else {
-            card.title = 'Keep going to unlock this achievement!';
-        }
-        
-        achievementsGrid.appendChild(card);
     });
+    
+    list.innerHTML = html;
+    modal.style.display = 'flex';
 }
 
 /**
- * Get total habit completions
+ * Skip honesty check
  */
-function getTotalCompletions() {
-    let total = 0;
-    habits.forEach(habit => {
-        if (habit.completionHistory) {
-            total += habit.completionHistory.filter(e => e.status === 'completed').length;
+window.skipHonestyCheck = function() {
+    document.getElementById('honesty-modal').style.display = 'none';
+    // Don't mark as done so it shows again next time
+}
+
+/**
+ * Submit honesty review
+ */
+window.submitHonestyReview = async function() {
+    const reviews = [];
+    const habitItems = document.querySelectorAll('.honesty-habit-item');
+    
+    // Collect all reviews
+    let allAnswered = true;
+    habitItems.forEach(item => {
+        const habitId = item.dataset.habitId;
+        const selected = item.querySelector(`input[name="honesty-${habitId}"]:checked`);
+        
+        if (!selected) {
+            allAnswered = false;
+            return;
         }
+        
+        reviews.push({
+            habitId,
+            honestyStatus: selected.value
+        });
     });
-    return total;
-}
-
-/**
- * Check if user has completed a perfect week
- */
-function checkPerfectWeek() {
-    if (habits.length === 0) return false;
     
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
-    weekStart.setHours(0, 0, 0, 0);
-    
-    // Check last 4 weeks for a perfect week
-    for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
-        const checkWeekStart = new Date(weekStart);
-        checkWeekStart.setDate(weekStart.getDate() - (weekOffset * 7));
-        
-        let isPerfectWeek = true;
-        
-        // Check each habit
-        for (const habit of habits) {
-            // Check each day of the week
-            for (let i = 0; i < 7; i++) {
-                const checkDate = new Date(checkWeekStart);
-                checkDate.setDate(checkWeekStart.getDate() + i);
-                
-                // Skip if future date
-                if (checkDate > today) continue;
-                
-                // Check if this day should be tracked
-                const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][checkDate.getDay()];
-                const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
-                
-                if (!shouldSkip) {
-                    // Check if completed
-                    const entry = habit.completionHistory?.find(e => {
-                        const d = new Date(e.date);
-                        d.setHours(0, 0, 0, 0);
-                        return d.getTime() === checkDate.getTime();
-                    });
-                    
-                    if (!entry || entry.status !== 'completed') {
-                        isPerfectWeek = false;
-                        break;
-                    }
-                }
-            }
-            
-            if (!isPerfectWeek) break;
-        }
-        
-        if (isPerfectWeek) return true;
-    }
-    
-    return false;
-}
-
-/**
- * Update profile display with user data
- */
-function updateProfileDisplay(user) {
-    // Update avatar
-    const avatarDiv = document.getElementById('profile-avatar');
-    const avatarText = avatarDiv.querySelector('.avatar-text');
-    
-    if (user.photoURL) {
-        avatarDiv.style.backgroundImage = `url(${user.photoURL})`;
-        avatarDiv.style.backgroundSize = 'cover';
-        avatarDiv.style.backgroundPosition = 'center';
-        avatarText.textContent = '';
-    } else {
-        // Show default user icon
-        avatarDiv.style.backgroundImage = 'none';
-        avatarDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-        avatarText.textContent = '👤';
-        avatarText.style.fontSize = '4rem';
-    }
-    
-    // Update profile info
-    document.getElementById('profile-name').textContent = user.name;
-    document.getElementById('profile-email').textContent = user.email || 'No email provided';
-    document.getElementById('profile-userId').textContent = user.userId;
-    
-    // Update about section
-    const aboutDiv = document.getElementById('profile-about');
-    if (user.about && user.about.trim()) {
-        aboutDiv.textContent = user.about;
-        aboutDiv.style.display = 'block';
-    } else {
-        aboutDiv.textContent = 'No bio added yet. Click "Edit Profile" to add one!';
-        aboutDiv.style.fontStyle = 'italic';
-        aboutDiv.style.color = '#94a3b8';
-    }
-    
-    // Update auth provider
-    const authProviderDiv = document.getElementById('profile-authProvider');
-    if (user.authProvider === 'google') {
-        authProviderDiv.innerHTML = '<span class="badge-google">🔐 Google Sign-In</span>';
-    } else {
-        authProviderDiv.innerHTML = '<span class="badge-local">🔑 Password</span>';
-    }
-    
-    // Update member since
-    const createdDate = new Date(user.createdAt);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('profile-createdAt').textContent = createdDate.toLocaleDateString('en-US', options);
-}
-
-/**
- * Update navigation profile icon
- */
-function updateNavProfileIcon(user) {
-    const navIcon = document.getElementById('nav-profile-icon');
-    const iconText = navIcon.querySelector('.profile-icon-text');
-    
-    if (user.photoURL) {
-        navIcon.style.backgroundImage = `url(${user.photoURL})`;
-        navIcon.style.backgroundSize = 'cover';
-        navIcon.style.backgroundPosition = 'center';
-        navIcon.style.background = '';
-        iconText.textContent = '';
-    } else {
-        // Show default user icon
-        navIcon.style.backgroundImage = 'none';
-        navIcon.style.background = 'linear-gradient(135deg, #ffffff, #f8fafc)';
-        iconText.textContent = '👤';
-        iconText.style.fontSize = '1.8rem';
-        iconText.style.webkitBackgroundClip = 'unset';
-        iconText.style.webkitTextFillColor = 'unset';
-        iconText.style.filter = 'grayscale(20%)';
-    }
-}
-
-/**
- * Enter edit mode
- */
-function enterEditMode() {
-    if (!currentUserData) return;
-    
-    document.getElementById('profile-view-mode').style.display = 'none';
-    document.getElementById('profile-edit-mode').style.display = 'block';
-    
-    // Populate edit form
-    document.getElementById('name-input').value = currentUserData.name;
-    document.getElementById('photoURL-input').value = currentUserData.photoURL || '';
-    document.getElementById('about-input').value = currentUserData.about || '';
-    
-    // Update avatar preview
-    const avatarEditDiv = document.getElementById('profile-avatar-edit');
-    const avatarEditText = avatarEditDiv.querySelector('.avatar-text-edit');
-    
-    if (currentUserData.photoURL) {
-        avatarEditDiv.style.backgroundImage = `url(${currentUserData.photoURL})`;
-        avatarEditDiv.style.backgroundSize = 'cover';
-        avatarEditDiv.style.backgroundPosition = 'center';
-        avatarEditDiv.style.background = '';
-        avatarEditText.textContent = '';
-    } else {
-        // Show default user icon
-        avatarEditDiv.style.backgroundImage = 'none';
-        avatarEditDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-        avatarEditText.textContent = '👤';
-        avatarEditText.style.fontSize = '4rem';
-    }
-    
-    updateCharCount();
-    
-    // Add event listeners
-    document.getElementById('about-input').addEventListener('input', updateCharCount);
-    document.getElementById('photoURL-input').addEventListener('input', previewPhotoURL);
-    document.getElementById('profile-edit-form').addEventListener('submit', saveProfile);
-}
-
-/**
- * Cancel edit mode
- */
-function cancelEditMode() {
-    document.getElementById('profile-edit-mode').style.display = 'none';
-    document.getElementById('profile-view-mode').style.display = 'block';
-}
-
-/**
- * Update character count
- */
-function updateCharCount() {
-    const aboutInput = document.getElementById('about-input');
-    const charCount = document.getElementById('about-char-count');
-    charCount.textContent = aboutInput.value.length;
-}
-
-/**
- * Preview photo URL
- */
-function previewPhotoURL() {
-    const photoURL = document.getElementById('photoURL-input').value.trim();
-    const avatarEditDiv = document.getElementById('profile-avatar-edit');
-    const avatarEditText = avatarEditDiv.querySelector('.avatar-text-edit');
-    
-    if (photoURL) {
-        avatarEditDiv.style.backgroundImage = `url(${photoURL})`;
-        avatarEditDiv.style.backgroundSize = 'cover';
-        avatarEditDiv.style.backgroundPosition = 'center';
-        avatarEditDiv.style.background = '';
-        avatarEditText.textContent = '';
-    } else {
-        // Show default user icon
-        avatarEditDiv.style.backgroundImage = 'none';
-        avatarEditDiv.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-        avatarEditText.textContent = '👤';
-        avatarEditText.style.fontSize = '4rem';
-    }
-}
-
-/**
- * Save profile changes
- */
-async function saveProfile(e) {
-    e.preventDefault();
-    
-    const name = document.getElementById('name-input').value.trim();
-    const photoURL = document.getElementById('photoURL-input').value.trim();
-    const about = document.getElementById('about-input').value.trim();
-    
-    if (!name) {
-        alert('Name is required');
+    if (!allAnswered) {
+        showMessage('Please review all habits before submitting', 'info');
         return;
     }
     
     try {
-        const response = await fetch('/auth/profile', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name, photoURL, about })
+        const response = await fetch(`${API_URL}/honesty-review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviews })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            currentUserData = data.user;
-            updateProfileDisplay(data.user);
-            updateNavProfileIcon(data.user);
+            // Mark as done for today
+            localStorage.setItem('lastHonestyCheck', new Date().toDateString());
             
-            // Reload stats and achievements
-            await loadProfileStats();
-            updateAchievements();
+            document.getElementById('honesty-modal').style.display = 'none';
+            showMessage(data.message, 'success');
             
-            cancelEditMode();
-            showSuccessMessage('✅ Profile updated successfully!');
+            // Reload habits to reflect changes
+            await loadHabits();
+            displayHabits();
+            refreshWeeklyProgress();
         } else {
-            alert('❌ ' + (data.message || 'Failed to update profile'));
+            showMessage(data.message || 'Failed to submit review', 'error');
         }
     } catch (error) {
-        console.error('Profile update error:', error);
-        alert('❌ Failed to update profile. Please try again.');
+        console.error('Error submitting honesty review:', error);
+        showMessage('Failed to submit honesty review', 'error');
     }
 }
 
-/**
- * Show success message
- */
-function showSuccessMessage(message) {
-    // Create toast notification
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #34D399, #059669);
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        font-weight: 600;
-        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.4);
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-    `;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+// ========== Profile Functions ==========
 
-/**
- * Copy text to clipboard
- */
-function copyToClipboard(elementId) {
-    const element = document.getElementById(elementId);
-    const text = element.textContent;
-    
-    navigator.clipboard.writeText(text).then(() => {
-        // Show temporary success message
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = '✅';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy to clipboard');
-    });
-}
-
-/**
- * Show message to user
- */
-function showMessage(message, type = 'info') {
-    // Simple alert for now, could be replaced with a toast notification
-    const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-    console.log(`${emoji} ${message}`);
-}
-
-/**
- * Get random message from array
- */
-function getRandomMessage(messagesArray) {
-    return messagesArray[Math.floor(Math.random() * messagesArray.length)];
-}
-
-/**
- * Show motivational message based on action
- */
-function showMotivationalMessage(type, habit = null, streakGrew = false) {
-    let message = '';
-    let extraInfo = '';
-    let messageColor = '';
-    
-    if (type === 'completion') {
-        message = getRandomMessage(COMPLETION_MESSAGES);
-        messageColor = 'linear-gradient(135deg, #34D399, #059669)';
+async function loadProfile() {
+    try {
+        const response = await fetch('/auth/profile');
+        const data = await response.json();
         
-        if (habit && habit.streak > 0) {
-            if (streakGrew) {
-                extraInfo = `🔥 ${habit.streak} day streak!`;
-                if (habit.streak === 7) extraInfo += ' 🎉 One week!';
-                if (habit.streak === 30) extraInfo += ' 🏆 One month!';
-                if (habit.streak === 100) extraInfo += ' 👑 Century!';
-            } else {
-                extraInfo = `Streak: ${habit.streak} days`;
-            }
-        }
-    } else if (type === 'missed') {
-        message = getRandomMessage(SUPPORT_MESSAGES);
-        messageColor = 'linear-gradient(135deg, #F59E0B, #D97706)';
-        extraInfo = 'Take it easy on yourself 💙';
-    } else if (type === 'streak-break') {
-        message = getRandomMessage(STREAK_BREAK_MESSAGES);
-        messageColor = 'linear-gradient(135deg, #8B5CF6, #7C3AED)';
-        extraInfo = "What matters is that you're here now 🌟";
-    } else if (type === 'return') {
-        message = getRandomMessage(ENCOURAGEMENT_ON_RETURN);
-        messageColor = 'linear-gradient(135deg, #3B82F6, #2563EB)';
-        extraInfo = "Let's make today count! 💪";
-    }
-    
-    displayMotivationalToast(message, extraInfo, messageColor);
-}
-
-/**
- * Display motivational toast notification
- */
-function displayMotivationalToast(message, extraInfo = '', bgColor = '') {
-    const toast = document.createElement('div');
-    toast.className = 'motivational-toast';
-    
-    const backgroundColor = bgColor || 'linear-gradient(135deg, #667eea, #764ba2)';
-    
-    toast.innerHTML = `
-        <div class="toast-content">
-            <div class="toast-message">${message}</div>
-            ${extraInfo ? `<div class="toast-extra">${extraInfo}</div>` : ''}
-        </div>
-    `;
-    
-    toast.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        background: ${backgroundColor};
-        color: white;
-        padding: 20px 28px;
-        border-radius: 16px;
-        font-weight: 600;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-        z-index: 10000;
-        animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        max-width: 400px;
-        font-size: 1.1rem;
-        line-height: 1.5;
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Auto-remove after 4 seconds
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-    
-    // Click to dismiss
-    toast.addEventListener('click', () => {
-        toast.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-    });
-}
-
-/**
- * Detect missed habits and show supportive messages
- */
-async function checkForMissedHabits() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    let missedCount = 0;
-    let streaksBroken = 0;
-    
-    habits.forEach(habit => {
-        // Check if yesterday should have been tracked
-        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][yesterday.getDay()];
-        const shouldSkip = habit.skipDays && habit.skipDays.includes(dayName);
-        
-        if (!shouldSkip) {
-            // Check if yesterday was completed
-            const yesterdayEntry = habit.completionHistory?.find(entry => {
-                const d = new Date(entry.date);
-                d.setHours(0, 0, 0, 0);
-                return d.getTime() === yesterday.getTime();
-            });
+        if (data.success && data.user) {
+            // Update profile info
+            const profileName = document.getElementById('profile-name');
+            const profileEmail = document.getElementById('profile-email');
+            const profileUserId = document.getElementById('profile-userId');
             
-            if (!yesterdayEntry || yesterdayEntry.status === 'incomplete') {
-                missedCount++;
-                
-                // Check if this broke a streak
-                if (habit.streak === 0 && habit.completionHistory?.some(e => e.status === 'completed')) {
-                    streaksBroken++;
-                }
-            }
+            if (profileName) profileName.textContent = data.user.name || 'User';
+            if (profileEmail) profileEmail.textContent = data.user.email || '';
+            if (profileUserId) profileUserId.textContent = data.user.userId || '';
+            
+            // Update stats
+            const statTotal = document.getElementById('stat-total-habits');
+            const statCompleted = document.getElementById('stat-completed-today');
+            
+            if (statTotal) statTotal.textContent = habits.length;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const completedToday = habits.filter(h => {
+                const entry = h.completionHistory?.find(e => {
+                    const d = new Date(e.date);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() === today.getTime();
+                });
+                return entry && entry.status === 'completed';
+            }).length;
+            
+            if (statCompleted) statCompleted.textContent = completedToday;
+            
+            // Hide loading, show content
+            const loading = document.querySelector('.profile-loading');
+            const content = document.querySelector('.profile-content');
+            if (loading) loading.style.display = 'none';
+            if (content) content.style.display = 'block';
+        } else {
+            console.error('Profile data not found:', data);
+            showMessage('Failed to load profile', 'error');
         }
-    });
-    
-    return { missedCount, streaksBroken };
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showMessage('Failed to load profile', 'error');
+    }
 }
 
-/**
- * Show welcome back message for returning users
- */
-function checkAndShowReturnMessage() {
-    const lastVisit = localStorage.getItem('lastVisitDate');
-    const today = new Date().toDateString();
+// ========== Profile Edit Functions ==========
+
+window.enterEditMode = function() {
+    const editBtn = document.getElementById('btn-edit-mode');
+    const editForm = document.getElementById('profile-edit-form');
+    const displaySection = document.querySelector('.profile-display');
     
-    if (lastVisit && lastVisit !== today) {
-        const lastVisitDate = new Date(lastVisit);
-        const daysSinceVisit = Math.floor((new Date() - lastVisitDate) / (1000 * 60 * 60 * 24));
+    if (editBtn && editForm && displaySection) {
+        editBtn.style.display = 'none';
+        editForm.style.display = 'block';
+        displaySection.style.display = 'none';
         
-        if (daysSinceVisit >= 2) {
-            // User hasn't visited in 2+ days, show welcoming message
-            setTimeout(() => {
-                showMotivationalMessage('return');
-            }, 1000);
-        }
+        // Pre-fill form with current values
+        const nameInput = document.getElementById('edit-name');
+        const emailInput = document.getElementById('edit-email');
+        const currentName = document.getElementById('profile-name');
+        const currentEmail = document.getElementById('profile-email');
+        
+        if (nameInput && currentName) nameInput.value = currentName.textContent;
+        if (emailInput && currentEmail) emailInput.value = currentEmail.textContent;
     }
-    
-    // Update last visit
-    localStorage.setItem('lastVisitDate', today);
 }
+
+window.cancelEditMode = function() {
+    const editBtn = document.getElementById('btn-edit-mode');
+    const editForm = document.getElementById('profile-edit-form');
+    const displaySection = document.querySelector('.profile-display');
+    
+    if (editBtn && editForm && displaySection) {
+        editBtn.style.display = 'inline-block';
+        editForm.style.display = 'none';
+        displaySection.style.display = 'block';
+    }
+}
+
+window.copyToClipboard = function(elementId) {
+    const element = document.getElementById(elementId);
+    if (element && element.textContent) {
+        navigator.clipboard.writeText(element.textContent)
+            .then(() => {
+                showMessage('Copied to clipboard!', 'success');
+            })
+            .catch(err => {
+                console.error('Failed to copy:', err);
+                showMessage('Failed to copy to clipboard', 'error');
+            });
+    }
+}
+
+// Make functions global
+window.switchPage = switchPage;
+window.toggleToday = toggleToday;
+window.deleteHabit = deleteHabit;

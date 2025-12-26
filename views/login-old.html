@@ -61,43 +61,142 @@
             font-size: 0.95rem;
         }
 
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .switch-auth {
+            text-align: center;
+            margin-top: 24px;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .switch-auth a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .switch-auth a:hover {
+            text-decoration: underline;
+        }
+
         .alert {
-            display: none;
-            padding: 14px;
+            padding: 14px 16px;
             border-radius: 10px;
             margin-bottom: 20px;
             font-size: 0.95rem;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            display: none;
         }
 
         .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
         }
 
         .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+            background: #d1fae5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
         }
 
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px 8px;
+            transition: opacity 0.2s;
+        }
+
+        .toggle-password:hover {
+            opacity: 0.7;
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        /* Google Sign-in Button */
         .btn-google {
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             background: white;
-            color: #444;
+            color: #333;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
             font-size: 1rem;
@@ -108,7 +207,7 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .btn-google:hover {
@@ -125,120 +224,6 @@
         .google-icon {
             width: 20px;
             height: 20px;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 25px 0;
-            position: relative;
-        }
-
-        .divider::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 50%;
-            width: 100%;
-            height: 1px;
-            background: #e2e8f0;
-        }
-
-        .divider span {
-            background: white;
-            padding: 0 15px;
-            color: #94a3b8;
-            font-size: 0.9rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #334155;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            font-family: inherit;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .password-input-wrapper {
-            position: relative;
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 4px;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-
-        .toggle-password:hover {
-            opacity: 1;
-        }
-
-        .btn-primary {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .switch-auth {
-            text-align: center;
-            margin-top: 20px;
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .switch-auth a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .switch-auth a:hover {
-            text-decoration: underline;
         }
 
         .loading {
@@ -271,7 +256,6 @@
             <span>or</span>
         </div>
 
-        <!-- User ID Login Form -->
         <form id="login-form">
             <div class="form-group">
                 <label for="userId">User ID</label>
@@ -305,8 +289,29 @@
             <button type="submit" class="btn-primary">Login</button>
         </form>
 
+        <div class="switch-auth" style="margin-top: 15px;">
+            <a href="#" id="forgotPasswordLink">Forgot Password?</a>
+        </div>
+
         <div class="switch-auth">
             Don't have an account? <a href="/signup">Sign Up</a>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 40px; border-radius: 15px; max-width: 450px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="margin-bottom: 10px; color: #2d3748;">Reset Password</h2>
+            <p style="color: #718096; margin-bottom: 20px; font-size: 14px;">Enter your email address and we'll send you a link to reset your password.</p>
+            <div id="modalAlert" class="alert"></div>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="resetEmail">Email Address</label>
+                    <input type="email" id="resetEmail" placeholder="your.email@example.com" required>
+                </div>
+                <button type="submit" class="btn-primary">Send Reset Link</button>
+                <button type="button" id="closeModal" style="margin-top: 10px; background: #e2e8f0; color: #4a5568;">Cancel</button>
+            </form>
         </div>
     </div>
 
@@ -326,7 +331,7 @@
             alertDiv.style.display = 'block';
             setTimeout(() => {
                 alertDiv.style.display = 'none';
-            }, 5000);
+            }, 3000);
         }
 
         // Check for session expired message
@@ -345,6 +350,45 @@
             togglePassword.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
         });
 
+        // Traditional Login Form Handler
+        const loginForm = document.getElementById('login-form');
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!userId || !password) {
+                showAlert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('An error occurred. Please try again.');
+            }
+        });
+
         // Google Sign-in Handler
         const googleSigninBtn = document.getElementById('google-signin-btn');
         
@@ -353,65 +397,35 @@
                 googleSigninBtn.classList.add('loading');
                 googleSigninBtn.textContent = 'Signing in with Google...';
                 
-                console.log('Attempting Google sign-in...');
-                
                 // Sign in with Google
                 const result = await signInWithGoogle();
-                
-                console.log('Sign-in result:', result);
                 
                 if (!result.success) {
                     throw new Error(result.error || 'Google sign-in failed');
                 }
                 
                 // Send token to backend
-                console.log('📤 Sending token to backend...');
+                const response = await fetch('/auth/google', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken: result.idToken })
+                });
                 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                const data = await response.json();
                 
-                try {
-                    const response = await fetch('/auth/google', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ idToken: result.idToken }),
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    console.log('📥 Response status:', response.status);
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('❌ Server error:', errorText);
-                        throw new Error('Server returned ' + response.status);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('📋 Backend response:', data);
-                    
-                    if (data.success) {
-                        showAlert('Login successful! Redirecting...', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 1000);
-                    } else {
-                        throw new Error(data.message || 'Authentication failed');
-                    }
-                } catch (fetchError) {
-                    clearTimeout(timeoutId);
-                    if (fetchError.name === 'AbortError') {
-                        console.error('❌ Request timeout - server not responding');
-                        throw new Error('Server is not responding. Please check your connection.');
-                    }
-                    console.error('❌ Fetch error:', fetchError);
-                    throw fetchError;
+                if (data.success) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || 'Authentication failed');
                 }
             } catch (error) {
                 console.error('Google sign-in error:', error);
-                showAlert(error.message || 'Failed to sign in with Google. Please try again.');
+                showAlert(error.message || 'Failed to sign in with Google');
                 googleSigninBtn.classList.remove('loading');
                 googleSigninBtn.innerHTML = `
                     <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -425,49 +439,66 @@
             }
         });
 
-        // User ID/Password Login Handler
-        const loginForm = document.getElementById('login-form');
-        
-        loginForm.addEventListener('submit', async (e) => {
+        // Forgot Password Modal Handling
+        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+        const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+        const closeModal = document.getElementById('closeModal');
+        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+        const modalAlert = document.getElementById('modalAlert');
+
+        function showModalAlert(message, type = 'error') {
+            modalAlert.textContent = message;
+            modalAlert.className = `alert alert-${type}`;
+            modalAlert.style.display = 'block';
+            setTimeout(() => {
+                modalAlert.style.display = 'none';
+            }, 3000);
+        }
+
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            forgotPasswordModal.style.display = 'flex';
+        });
+
+        closeModal.addEventListener('click', () => {
+            forgotPasswordModal.style.display = 'none';
+            forgotPasswordForm.reset();
+            modalAlert.style.display = 'none';
+        });
+
+        forgotPasswordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const userId = document.getElementById('userId').value.trim();
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('resetEmail').value.trim();
             
-            if (!userId || !password) {
-                showAlert('Please fill in all fields');
+            if (!email) {
+                showModalAlert('Please enter your email address');
                 return;
             }
             
             try {
-                const submitBtn = loginForm.querySelector('button[type="submit"]');
-                submitBtn.classList.add('loading');
-                submitBtn.textContent = 'Logging in...';
-                
-                const response = await fetch('/auth/login', {
+                const response = await fetch('/auth/forgot-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ userId, password })
+                    body: JSON.stringify({ email })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showAlert('Login successful! Redirecting...', 'success');
+                    showModalAlert('If that email exists, a password reset link has been sent. Check your inbox!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                        forgotPasswordModal.style.display = 'none';
+                        forgotPasswordForm.reset();
+                    }, 3000);
                 } else {
-                    throw new Error(data.message || 'Login failed');
+                    showModalAlert(data.message);
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                showAlert(error.message || 'Failed to login. Please check your credentials.');
-                const submitBtn = loginForm.querySelector('button[type="submit"]');
-                submitBtn.classList.remove('loading');
-                submitBtn.textContent = 'Login';
+                console.error('Forgot password error:', error);
+                showModalAlert('An error occurred. Please try again.');
             }
         });
     </script>
