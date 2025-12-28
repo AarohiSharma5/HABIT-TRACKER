@@ -168,6 +168,16 @@ async function loadHabits() {
         
         if (data.success) {
             habits = data.habits;
+            
+            // Clean up orphaned timers (timers for habits that are no longer in-progress)
+            Object.keys(activeTimers).forEach(habitId => {
+                const habit = habits.find(h => h._id === habitId);
+                if (!habit || habit.status !== 'in-progress') {
+                    // Habit doesn't exist or is no longer in-progress, clean up timer
+                    clearInterval(activeTimers[habitId].intervalId);
+                    delete activeTimers[habitId];
+                }
+            });
         }
     } catch (error) {
         console.error('Error loading habits:', error);

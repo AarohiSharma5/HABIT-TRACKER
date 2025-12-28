@@ -12,7 +12,7 @@
  * 3. MISSED - No entry exists (breaks streak)
  * 
  * SKIP RULES (ENFORCED):
- * 1. Maximum 1 skip per week (Monday-Sunday)
+ * 1. Maximum skips based on daysPerWeek setting (e.g., 6 days/week = 1 skip allowed)
  * 2. Cannot skip 2 consecutive days
  * 3. Skipped days DO NOT break streaks
  * 4. Skipped days count as "active" days (maintaining habit)
@@ -114,7 +114,7 @@ const habitSchema = new mongoose.Schema({
             enum: ['completed', 'skipped', 'incomplete'],
             default: 'completed'
             // 'completed' - User marked habit as done
-            // 'skipped' - User intentionally skipped (allowed 1 per week)
+            // 'skipped' - User intentionally skipped (allowed based on daysPerWeek setting)
             // 'incomplete' - Day passed without action (legacy entries)
         },
         duration: {
@@ -291,7 +291,7 @@ habitSchema.methods.startHabit = function() {
     this.status = 'in-progress';
     this.startedAt = new Date(); // Current timestamp with time
     
-    return this.save();
+    return this.save({ validateModifiedOnly: true });
 };
 
 /**
@@ -502,21 +502,21 @@ habitSchema.methods.complete = function(duration = null, reflection = null) {
     });
     
     // Save all changes to MongoDB (persistence)
-    return this.save();
+    return this.save({ validateModifiedOnly: true });
 };
 
 /**
  * Mark a day as skipped (intentionally not done)
  * 
  * SKIP RULES (CRITICAL):
- * 1. Maximum 1 skip per week (Monday-Sunday)
+ * 1. Maximum skips based on user's daysPerWeek setting (7 days - daysPerWeek = allowed skips)
  * 2. Cannot skip 2 consecutive days
  * 3. Skipped days DO NOT break streaks
  * 4. Skipped days count as "active" (not missed)
  * 
  * VALIDATION:
  * - Checks if day already has an entry (completed/skipped)
- * - Enforces weekly skip limit (max 1 per week)
+ * - Enforces weekly skip limit based on daysPerWeek (e.g., 6 days/week = 1 skip allowed)
  * - Prevents consecutive skips (yesterday or tomorrow can't be skipped)
  * 
  * STREAK IMPACT:
@@ -539,10 +539,19 @@ habitSchema.methods.skipDay = async function(date) {
         throw new Error(`Day already marked as ${status}. Remove it first to change.`);
     }
     
-    // RULE 1: Check weekly skip limit (max 1 skip per week)
+    // RULE 1: Check weekly skip limit based on daysPerWeek setting
+    // Calculate allowed skips: 7 days - daysPerWeek = number of allowed skip days
+    const allowedSkips = 7 - (this.daysPerWeek || 7);
+    
+    if (allowedSkips <= 0) {
+        throw new Error('No skip days allowed for daily habits (7 days/week). Use designated skip days when creating the habit.');
+    }
+    
     const weekSkips = this.getWeeklyStatus(skipDate).filter(day => day.status === 'skipped');
-    if (weekSkips.length >= 1) {
-        throw new Error('Maximum 1 skip per week allowed. This maintains consistency.');
+    
+    if (weekSkips.length >= allowedSkips) {
+        const skipText = allowedSkips === 1 ? 'skip' : 'skips';
+        throw new Error(`Maximum ${allowedSkips} ${skipText} per week allowed (${this.daysPerWeek} active days/week). This maintains consistency.`);
     }
     
     // RULE 2: Check for consecutive skips (yesterday)
@@ -584,7 +593,7 @@ habitSchema.methods.skipDay = async function(date) {
         this.lastCompleted = skipDate;
     }
     
-    return this.save();
+    return this.save({ validateModifiedOnly: true });
 };
 
 /**
@@ -636,7 +645,7 @@ habitSchema.methods.getWeeklyStatus = function(referenceDate = new Date()) {
  */
 habitSchema.methods.resetStreak = function() {
     this.streak = 0;
-    return this.save();
+    return this.save({ validateModifiedOnly: true });
 };
 
 /**
@@ -680,7 +689,7 @@ habitSchema.methods.uncompleteToday = async function () {
     // This ensures data integrity after reload
     this._recomputeFromHistory();
 
-    return this.save();
+    return this.save({ validateModifiedOnly: true });
 };
 
 /**
@@ -869,6 +878,10 @@ habitSchema.statics.findByCategory = function(userId, category) {
 };
 
 // ========== Database Indexes (Performance Optimization) ==========
+
+// Index for faster queries by userId (most common query pattern)
+// Speeds up all user-specific habit queries
+habitSchema.index({ userId: 1, isActive: 1 });
 
 // Index for faster queries on active habits
 // Speeds up findActive() method after page reload
