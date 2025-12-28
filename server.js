@@ -197,23 +197,26 @@ if (missingEnvVars.length > 0 && process.env.NODE_ENV === 'production') {
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on ${isProduction ? 'production' : `http://localhost:${PORT}`}`);
-    console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
-    
-    if (!isProduction) {
-        console.log(`\n🌐 Open your browser and navigate to: http://localhost:${PORT}`);
-    }
-    
-    // Production readiness check
-    if (isProduction) {
-        console.log('✅ Production mode: Security headers enabled');
-        console.log('✅ Secure cookies enabled');
-        console.log('✅ CSP headers enabled');
-    } else {
-        console.log('⚠️  Development mode: Some security features disabled');
-    }
-});
+// Only start server if not running in serverless environment (Vercel)
+if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server is running on ${isProduction ? 'production' : `http://localhost:${PORT}`}`);
+        console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
+        
+        if (!isProduction) {
+            console.log(`\n🌐 Open your browser and navigate to: http://localhost:${PORT}`);
+        }
+        
+        // Production readiness check
+        if (isProduction) {
+            console.log('✅ Production mode: Security headers enabled');
+            console.log('✅ Secure cookies enabled');
+            console.log('✅ CSP headers enabled');
+        } else {
+            console.log('⚠️  Development mode: Some security features disabled');
+        }
+    });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
@@ -223,3 +226,6 @@ process.on('unhandledRejection', (err) => {
         console.error(err.stack);
     }
 });
+
+// Export for Vercel serverless
+module.exports = app;
