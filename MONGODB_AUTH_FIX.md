@@ -35,7 +35,7 @@ MongoServerError: bad auth : authentication failed
 2. Find the `MONGODB_URI` line
 3. **Replace it completely** with your new connection string:
    ```
-   MONGODB_URI=mongodb+srv://aarohi:Test1234@cluster0.zmibrqq.mongodb.net/habit-tracker?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://<your-username>:<your-password>@cluster0.xxxxx.mongodb.net/habit-tracker?retryWrites=true&w=majority
    ```
 4. **Make sure**:
    - No spaces before or after `=`
@@ -68,7 +68,7 @@ Your `.env` file should look like this:
 
 ```env
 # MongoDB Connection
-MONGODB_URI=mongodb+srv://your-username:your-password@cluster0.zmibrqq.mongodb.net/habit-tracker?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>.mongodb.net/habit-tracker?retryWrites=true&w=majority
 
 # Session Secret
 SESSION_SECRET=your-secret-key-here
@@ -119,7 +119,7 @@ If your password has special characters, URL-encode them:
 **Example:**
 - Password: `MyP@ss#123`
 - URL-Encoded: `MyP%40ss%23123`
-- Full URI: `mongodb+srv://user:MyP%40ss%23123@cluster.mongodb.net/db`
+- Full URI: `mongodb+srv://<username>:<encoded-password>@<cluster-url>.mongodb.net/<database>`
 
 ### Or Just Use a Simple Password
 
@@ -143,7 +143,7 @@ Test MongoDB connection manually:
 brew install mongosh
 
 # Test connection (replace with your actual URI)
-mongosh "mongodb+srv://username:password@cluster.mongodb.net/habit-tracker"
+mongosh "mongodb+srv://<username>:<password>@<cluster-url>.mongodb.net/habit-tracker"
 ```
 
 ---
