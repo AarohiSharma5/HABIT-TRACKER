@@ -1509,6 +1509,9 @@ async function loadProfile() {
             
             if (statCompleted) statCompleted.textContent = completedToday;
             
+            // FIXED: Render badges for all habits
+            renderBadges();
+            
             // Hide loading, show content
             const loading = document.querySelector('.profile-loading');
             const content = document.querySelector('.profile-content');
@@ -1522,6 +1525,56 @@ async function loadProfile() {
         console.error('Error loading profile:', error);
         showMessage('Failed to load profile', 'error');
     }
+}
+
+/**
+ * FIXED: Render badges for all habits based on streak milestones
+ * Shows all 9 badge levels with locked/unlocked states
+ */
+function renderBadges() {
+    const container = document.getElementById('badges-container');
+    if (!container) return;
+    
+    // Clear existing badges
+    container.innerHTML = '';
+    
+    // Badge definitions matching model
+    const badgeLevels = [
+        { level: 1, name: 'Day One', icon: '🌱', days: 1 },
+        { level: 2, name: 'Week Warrior', icon: '🥉', days: 7 },
+        { level: 3, name: 'Habit Former', icon: '🥈', days: 21 },
+        { level: 4, name: 'Month Master', icon: '🏅', days: 30 },
+        { level: 5, name: 'Halfway Hero', icon: '🎖️', days: 50 },
+        { level: 6, name: 'Century Champion', icon: '🏆', days: 100 },
+        { level: 7, name: 'Double Century', icon: '💎', days: 200 },
+        { level: 8, name: 'Triple Century', icon: '👑', days: 300 },
+        { level: 9, name: 'Year Master', icon: '🌟', days: 365 }
+    ];
+    
+    // Calculate max streak across all habits
+    const maxStreak = habits.reduce((max, h) => Math.max(max, h.streak || 0), 0);
+    
+    // Render each badge
+    badgeLevels.forEach(badge => {
+        const isUnlocked = maxStreak >= badge.days;
+        const badgeItem = document.createElement('div');
+        badgeItem.className = `badge-item ${isUnlocked ? 'badge-unlocked' : 'badge-locked'} badge-${badge.days}`;
+        
+        badgeItem.innerHTML = `
+            <div class="badge-circle">
+                <div class="badge-icon">${badge.icon}</div>
+            </div>
+            <div class="badge-info">
+                <div class="badge-name">${badge.name}</div>
+                <div class="badge-days">${badge.days} ${badge.days === 1 ? 'day' : 'days'}</div>
+                <div class="badge-status">${isUnlocked ? '✓ Unlocked' : 'Locked'}</div>
+            </div>
+        `;
+        
+        container.appendChild(badgeItem);
+    });
+    
+    console.log(`[Badges] Rendered ${badgeLevels.length} badges. Max streak: ${maxStreak}`);
 }
 
 // ========== Profile Edit Functions ==========

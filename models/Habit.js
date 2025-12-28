@@ -771,11 +771,15 @@ habitSchema.methods._recomputeFromHistory = function () {
  */
 habitSchema.methods.getBadges = function() {
     const badges = [
-        { level: 1, name: 'Week Warrior', icon: '🥉', days: 7 },
-        { level: 2, name: 'Habit Former', icon: '🥈', days: 21 },
-        { level: 3, name: 'Month Master', icon: '🏅', days: 30 },
-        { level: 4, name: 'Halfway Hero', icon: '🎖️', days: 50 },
-        { level: 5, name: 'Century Champion', icon: '🏆', days: 100 }
+        { level: 1, name: 'Day One', icon: '🌱', days: 1 },
+        { level: 2, name: 'Week Warrior', icon: '🥉', days: 7 },
+        { level: 3, name: 'Habit Former', icon: '🥈', days: 21 },
+        { level: 4, name: 'Month Master', icon: '🏅', days: 30 },
+        { level: 5, name: 'Halfway Hero', icon: '🎖️', days: 50 },
+        { level: 6, name: 'Century Champion', icon: '🏆', days: 100 },
+        { level: 7, name: 'Double Century', icon: '💎', days: 200 },
+        { level: 8, name: 'Triple Century', icon: '👑', days: 300 },
+        { level: 9, name: 'Year Master', icon: '🌟', days: 365 }
     ];
     
     return badges.map(badge => ({
