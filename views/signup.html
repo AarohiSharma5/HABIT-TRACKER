@@ -274,6 +274,18 @@
         <!-- User ID Signup Form -->
         <form id="signup-form">
             <div class="form-group">
+                <label for="name">Name</label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    placeholder="Enter your full name"
+                    required
+                    autocomplete="name"
+                >
+            </div>
+
+            <div class="form-group">
                 <label for="userId">User ID</label>
                 <input 
                     type="text" 
@@ -395,10 +407,11 @@
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const name = document.getElementById('name').value.trim();
             const userId = document.getElementById('userId').value.trim();
             const password = document.getElementById('password').value;
             
-            if (!userId || !password) {
+            if (!name || !userId || !password) {
                 showAlert('Please fill in all fields');
                 return;
             }
@@ -418,7 +431,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ userId, password })
+                    body: JSON.stringify({ userId, name, password })
                 });
                 
                 const data = await response.json();
