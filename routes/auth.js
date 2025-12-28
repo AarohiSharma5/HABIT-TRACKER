@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { requireAuth } = require('../middleware/auth');
 const { authLimiter, googleAuthLimiter, resetRateLimit } = require('../middleware/rateLimiter');
 const { 
     logSuspiciousActivity, 
@@ -36,13 +37,13 @@ router.post('/google', googleAuthLimiter, logSuspiciousActivity, preventDuplicat
  * GET /auth/profile
  * Get user profile
  */
-router.get('/profile', authController.getProfile);
+router.get('/profile', requireAuth, authController.getProfile);
 
 /**
  * PUT /auth/profile
  * Update user profile
  */
-router.put('/profile', authController.updateProfile);
+router.put('/profile', requireAuth, authController.updateProfile);
 
 /**
  * POST /auth/logout

@@ -3047,6 +3047,38 @@ footer {
     max-width: 350px;
 }
 
+.btn-remove-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #991b1b;
+    border: 2px solid #fca5a5;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 4px;
+}
+
+.btn-remove-photo:hover {
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
+    border-color: #f87171;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-remove-photo:active {
+    transform: translateY(0);
+}
+
+.btn-remove-photo .remove-icon {
+    font-size: 1.1rem;
+}
+
 .upload-tabs {
     display: flex;
     gap: 8px;

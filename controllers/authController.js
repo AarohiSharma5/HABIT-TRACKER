@@ -271,11 +271,17 @@ exports.getProfile = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     try {
+        console.log('Update profile request:', {
+            userId: req.session.userId,
+            body: req.body
+        });
+        
         const { name, about, photoURL } = req.body;
         
         const user = await User.findById(req.session.userId);
         
         if (!user) {
+            console.error('User not found for ID:', req.session.userId);
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
@@ -286,8 +292,11 @@ exports.updateProfile = async (req, res) => {
         if (about !== undefined) user.about = about;
         if (photoURL !== undefined) user.photoURL = photoURL;
         
-        await user.save();
+        // Use validateModifiedOnly to avoid validating unchanged fields (like password)
+        await user.save({ validateModifiedOnly: true });
         req.session.userName = user.name;
+        
+        console.log('Profile updated successfully for user:', user.userId);
         
         res.json({
             success: true,

@@ -6,6 +6,7 @@
 // ========== Global Variables ==========
 const API_URL = '/api/habits';
 let habits = [];
+let currentUser = null; // Store current user profile data
 let activeTimers = {}; // Store active timers: { habitId: { startTime, intervalId, notified } }
 let dailyChart = null;
 let categoryChart = null;
@@ -66,6 +67,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadHabits();
     updateQuickStats();
     displayHabits();
+    
+    // Load user profile to update navbar icon
+    await loadUserProfileForNav();
     
     // Check for honesty review after page load
     setTimeout(() => checkForHonestyReview(), 1000);
@@ -141,6 +145,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 customCategoryGroup.style.display = 'none';
             }
         });
+    }
+    
+    // Setup profile edit form submission
+    const profileEditForm = document.getElementById('profile-edit-form');
+    if (profileEditForm) {
+        profileEditForm.addEventListener('submit', saveProfile);
     }
     
     switchPage('page-add-habit');
@@ -1625,20 +1635,72 @@ window.submitHonestyReview = async function() {
 
 // ========== Profile Functions ==========
 
+/**
+ * Load user profile for navbar icon (lightweight version)
+ */
+async function loadUserProfileForNav() {
+    try {
+        const response = await fetch('/auth/profile');
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+            currentUser = data.user;
+            // Update only the navbar icon
+            const navProfileIcon = document.getElementById('nav-profile-icon');
+            if (navProfileIcon) {
+                navProfileIcon.innerHTML = '';
+                
+                if (data.user.photoURL) {
+                    const img = document.createElement('img');
+                    img.src = data.user.photoURL;
+                    img.alt = data.user.name;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '50%';
+                    img.onerror = function() {
+                        this.remove();
+                        const span = document.createElement('span');
+                        span.className = 'profile-icon-text';
+                        span.textContent = data.user.name ? data.user.name.charAt(0).toUpperCase() : '?';
+                        navProfileIcon.appendChild(span);
+                    };
+                    navProfileIcon.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'profile-icon-text';
+                    span.textContent = data.user.name ? data.user.name.charAt(0).toUpperCase() : '?';
+                    navProfileIcon.appendChild(span);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile for navbar:', error);
+    }
+}
+
 async function loadProfile() {
     try {
         const response = await fetch('/auth/profile');
         const data = await response.json();
         
         if (data.success && data.user) {
+            // Store user data globally
+            currentUser = data.user;
+            
             // Update profile info
             const profileName = document.getElementById('profile-name');
             const profileEmail = document.getElementById('profile-email');
             const profileUserId = document.getElementById('profile-userId');
+            const profileAbout = document.getElementById('profile-about');
             
             if (profileName) profileName.textContent = data.user.name || 'User';
             if (profileEmail) profileEmail.textContent = data.user.email || '';
             if (profileUserId) profileUserId.textContent = data.user.userId || '';
+            if (profileAbout) profileAbout.textContent = data.user.about || '';
+            
+            // Update profile avatar
+            updateProfileAvatar(data.user);
             
             // Update stats
             const statTotal = document.getElementById('stat-total-habits');
@@ -1678,6 +1740,63 @@ async function loadProfile() {
         console.error('Error loading profile:', error);
         showMessage('Failed to load profile', 'error');
     }
+}
+
+/**
+ * Update profile avatar with photo or initials
+ */
+function updateProfileAvatar(user) {
+    console.log('Updating profile avatar with user:', user);
+    console.log('photoURL:', user.photoURL);
+    
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileAvatarEdit = document.getElementById('profile-avatar-edit');
+    const navProfileIcon = document.getElementById('nav-profile-icon');
+    
+    // Update all avatar elements (profile page view, edit, and navbar)
+    [profileAvatar, profileAvatarEdit, navProfileIcon].forEach(avatar => {
+        if (!avatar) {
+            console.log('Avatar element not found');
+            return;
+        }
+        
+        console.log('Updating avatar element:', avatar.id);
+        
+        // Clear existing content
+        avatar.innerHTML = '';
+        
+        if (user.photoURL) {
+            console.log('Setting photo URL:', user.photoURL);
+            // Show photo
+            const img = document.createElement('img');
+            img.src = user.photoURL;
+            img.alt = user.name;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '50%';
+            img.onerror = function() {
+                console.error('Failed to load image:', user.photoURL);
+                // If image fails to load, show initials
+                this.remove();
+                const span = document.createElement('span');
+                span.className = avatar.id === 'nav-profile-icon' ? 'profile-icon-text' : 'avatar-text';
+                span.textContent = user.name ? user.name.charAt(0).toUpperCase() : '?';
+                avatar.appendChild(span);
+            };
+            img.onload = function() {
+                console.log('Image loaded successfully');
+            };
+            avatar.appendChild(img);
+        } else {
+            console.log('No photoURL, showing initials');
+            // Show initials
+            const span = document.createElement('span');
+            span.className = avatar.id === 'nav-profile-icon' ? 'profile-icon-text' : 'avatar-text';
+            span.textContent = user.name ? user.name.charAt(0).toUpperCase() : '?';
+            avatar.appendChild(span);
+        }
+    });
 }
 
 /**
@@ -1901,35 +2020,140 @@ function renderAchievements() {
 // ========== Profile Edit Functions ==========
 
 window.enterEditMode = function() {
-    const editBtn = document.getElementById('btn-edit-mode');
-    const editForm = document.getElementById('profile-edit-form');
-    const displaySection = document.querySelector('.profile-display');
+    const editMode = document.getElementById('profile-edit-mode');
+    const displayMode = document.getElementById('profile-view-mode');
     
-    if (editBtn && editForm && displaySection) {
-        editBtn.style.display = 'none';
-        editForm.style.display = 'block';
-        displaySection.style.display = 'none';
+    if (editMode && displayMode) {
+        displayMode.style.display = 'none';
+        editMode.style.display = 'block';
         
         // Pre-fill form with current values
-        const nameInput = document.getElementById('edit-name');
-        const emailInput = document.getElementById('edit-email');
-        const currentName = document.getElementById('profile-name');
-        const currentEmail = document.getElementById('profile-email');
+        const nameInput = document.getElementById('name-input');
+        const aboutInput = document.getElementById('about-input');
+        const photoURLInput = document.getElementById('photoURL-input');
+        const aboutCharCount = document.getElementById('about-char-count');
         
-        if (nameInput && currentName) nameInput.value = currentName.textContent;
-        if (emailInput && currentEmail) emailInput.value = currentEmail.textContent;
+        const currentName = document.getElementById('profile-name');
+        const currentAbout = document.getElementById('profile-about');
+        
+        if (nameInput && currentName) {
+            nameInput.value = currentName.textContent;
+        }
+        
+        if (aboutInput && currentAbout) {
+            aboutInput.value = currentAbout.textContent;
+            if (aboutCharCount) {
+                aboutCharCount.textContent = aboutInput.value.length;
+            }
+        }
+        
+        // Pre-fill photoURL if available
+        if (photoURLInput && currentUser && currentUser.photoURL) {
+            photoURLInput.value = currentUser.photoURL;
+        }
+        
+        // Add character counter for about field
+        if (aboutInput && aboutCharCount) {
+            aboutInput.addEventListener('input', function() {
+                aboutCharCount.textContent = this.value.length;
+            });
+        }
     }
 }
 
 window.cancelEditMode = function() {
-    const editBtn = document.getElementById('btn-edit-mode');
-    const editForm = document.getElementById('profile-edit-form');
-    const displaySection = document.querySelector('.profile-display');
+    const editMode = document.getElementById('profile-edit-mode');
+    const displayMode = document.getElementById('profile-view-mode');
     
-    if (editBtn && editForm && displaySection) {
-        editBtn.style.display = 'inline-block';
-        editForm.style.display = 'none';
-        displaySection.style.display = 'block';
+    if (editMode && displayMode) {
+        editMode.style.display = 'none';
+        displayMode.style.display = 'block';
+    }
+}
+
+window.clearPhotoURL = function() {
+    const photoURLInput = document.getElementById('photoURL-input');
+    if (photoURLInput) {
+        photoURLInput.value = '';
+        showMessage('Photo URL cleared. Click "Save Changes" to update.', 'info');
+    }
+}
+
+window.saveProfile = async function(event) {
+    event.preventDefault();
+    
+    const nameInput = document.getElementById('name-input');
+    const aboutInput = document.getElementById('about-input');
+    const photoURLInput = document.getElementById('photoURL-input');
+    
+    const name = nameInput?.value.trim();
+    const about = aboutInput?.value.trim();
+    const photoURL = photoURLInput?.value.trim();
+    
+    if (!name) {
+        showMessage('Name is required', 'error');
+        return;
+    }
+    
+    // Validate photo URL if provided
+    if (photoURL) {
+        // Check if it's a direct image URL
+        const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i;
+        const isDirectImageURL = imageExtensions.test(photoURL);
+        
+        if (!isDirectImageURL) {
+            showMessage('⚠️ Please use a direct image URL (must end with .jpg, .png, .gif, etc.). Google/search result links won\'t work.', 'error');
+            return;
+        }
+        
+        // Check if URL is valid
+        try {
+            new URL(photoURL);
+        } catch (e) {
+            showMessage('Invalid URL format', 'error');
+            return;
+        }
+    }
+    
+    try {
+        const response = await fetch('/auth/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name,
+                about,
+                photoURL: photoURL || null // Send null to clear the photo
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Profile updated successfully! 🎉', 'success');
+            
+            // Update currentUser with new data
+            currentUser = data.user;
+            
+            // Update display with new values
+            const displayName = document.getElementById('profile-name');
+            const displayAbout = document.getElementById('profile-about');
+            
+            if (displayName) displayName.textContent = data.user.name;
+            if (displayAbout) displayAbout.textContent = data.user.about || '';
+            
+            // Update profile avatar with new photo
+            updateProfileAvatar(data.user);
+            
+            // Exit edit mode
+            cancelEditMode();
+        } else {
+            showMessage(data.message || 'Failed to update profile', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showMessage('Failed to update profile', 'error');
     }
 }
 

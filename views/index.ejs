@@ -469,8 +469,13 @@
                                         <span class="avatar-text-edit"></span>
                                     </div>
                                     <div class="avatar-upload">
-                                        <input type="url" id="photoURL-input" placeholder="Paste image URL (optional)" class="url-input">
-                                        <small class="form-help">Enter a direct image URL or leave blank for default icon</small>
+                                        <input type="url" id="photoURL-input" placeholder="https://example.com/image.jpg" class="url-input">
+                                        <button type="button" class="btn-remove-photo" onclick="clearPhotoURL()">
+                                            <span class="remove-icon">🗑️</span>
+                                            <span>Clear Photo URL</span>
+                                        </button>
+                                        <small class="form-help">📸 Use a direct image URL (must end with .jpg, .png, .gif, etc.)<br>
+                                        💡 Right-click on an image → "Copy image address"</small>
                                     </div>
                                 </div>
                                 <div class="profile-info">
