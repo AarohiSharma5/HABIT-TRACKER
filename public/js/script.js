@@ -606,6 +606,64 @@ window.deleteHabit = async function(habitId) {
     }
 }
 
+/**
+ * Skip habit for today
+ * Marks today as skipped without breaking streak
+ */
+window.skipHabitToday = async function(habitId) {
+    try {
+        const response = await fetch(`${API_URL}/${habitId}/skip`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ date: new Date() })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await loadHabits();
+            updateQuickStats();
+            displayHabits();
+            refreshWeeklyProgress();
+            showMessage('Day marked as skipped. Streak maintained! ⏸️', 'info');
+        } else {
+            showMessage(data.message || 'Failed to skip habit', 'error');
+        }
+    } catch (error) {
+        console.error('Error skipping habit:', error);
+        showMessage('Error skipping habit', 'error');
+    }
+}
+
+/**
+ * Undo skip for today
+ * Removes skip entry for today
+ */
+window.undoSkipToday = async function(habitId) {
+    try {
+        const response = await fetch(`${API_URL}/${habitId}/uncomplete`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await loadHabits();
+            updateQuickStats();
+            displayHabits();
+            refreshWeeklyProgress();
+            showMessage('Skip undone', 'success');
+        } else {
+            showMessage(data.message || 'Failed to undo skip', 'error');
+        }
+    } catch (error) {
+        console.error('Error undoing skip:', error);
+        showMessage('Error undoing skip', 'error');
+    }
+}
+
 // ========== UI Functions ==========
 
 /**
@@ -635,6 +693,12 @@ function createHabitElement(habit) {
         return d.getTime() === today.getTime();
     });
     const isCompletedToday = todayEntry && todayEntry.status === 'completed';
+    const isSkippedToday = todayEntry && todayEntry.status === 'skipped';
+    
+    // Check if today is a designated skip day for this habit
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayDayName = dayNames[today.getDay()];
+    const isDesignatedSkipDay = habit.skipDays && habit.skipDays.includes(todayDayName);
     
     const frequencyText = habit.daysPerWeek === 7 ? 'Daily' : `${habit.daysPerWeek} days/week`;
     
@@ -671,6 +735,8 @@ function createHabitElement(habit) {
             const secs = todayEntry.duration % 60;
             timerDisplay = `<div class="duration-display">⏱️ ${mins}m ${secs}s</div>`;
         }
+    } else if (todayEntry && todayEntry.status === 'skipped') {
+        statusBadge = '<span class="status-badge status-skipped">⏸️ Skipped</span>';
     } else if (habit.status === 'in-progress') {
         statusBadge = '<span class="status-badge status-in-progress">⏱️ In Progress</span>';
         const mins = Math.floor(elapsedTime / 60);
@@ -679,7 +745,7 @@ function createHabitElement(habit) {
     }
     
     return `
-        <div class="habit-card ${isCompletedToday ? 'completed-today' : ''}" data-habit-id="${habit._id}">
+        <div class="habit-card ${isCompletedToday ? 'completed-today' : ''} ${isSkippedToday ? 'skipped-today' : ''}" data-habit-id="${habit._id}">
             <div class="habit-card-header">
                 <div class="habit-card-title-section">
                     <h3 class="habit-card-title">${habit.name}</h3>
@@ -697,8 +763,9 @@ function createHabitElement(habit) {
             
             <div class="habit-card-footer">
                 <div class="habit-card-actions-primary">
-                    ${habit.status === 'idle' ? `
+                    ${habit.status === 'idle' && !todayEntry ? `
                         <button class="btn-start" onclick="startHabit('${habit._id}')">Start</button>
+                        ${isDesignatedSkipDay ? `<button class="btn-skip" onclick="skipHabitToday('${habit._id}')">Skip Today</button>` : ''}
                     ` : ''}
                     ${habit.status === 'in-progress' ? `
                         <button class="btn-pause" onclick="pauseHabit('${habit._id}')">Pause</button>
@@ -706,6 +773,9 @@ function createHabitElement(habit) {
                     ` : ''}
                     ${habit.status === 'completed' ? `
                         <button class="btn-undo" onclick="toggleToday('${habit._id}', false)">Undo</button>
+                    ` : ''}
+                    ${todayEntry && todayEntry.status === 'skipped' ? `
+                        <button class="btn-undo" onclick="undoSkipToday('${habit._id}')">Undo Skip</button>
                     ` : ''}
                 </div>
                 <button class="btn-delete-minimal" onclick="deleteHabit('${habit._id}')" title="Delete habit">×</button>
@@ -723,6 +793,7 @@ function updateQuickStats() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Count completed habits today
     const completedToday = habits.filter(habit => {
         const entry = habit.completionHistory?.find(e => {
             const d = new Date(e.date);
@@ -732,7 +803,17 @@ function updateQuickStats() {
         return entry && entry.status === 'completed';
     }).length;
     
-    document.getElementById('active-today').textContent = completedToday;
+    // Active today = completed + skipped (both maintain engagement)
+    const activeToday = habits.filter(habit => {
+        const entry = habit.completionHistory?.find(e => {
+            const d = new Date(e.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === today.getTime();
+        });
+        return entry && (entry.status === 'completed' || entry.status === 'skipped');
+    }).length;
+    
+    document.getElementById('active-today').textContent = activeToday;
     
     const longestStreak = Math.max(...habits.map(h => h.streak || 0), 0);
     document.getElementById('longest-streak').textContent = longestStreak;
@@ -803,7 +884,7 @@ function createDailyChart(data) {
             labels: ['Completed', 'Skipped', 'Not Done'],
             datasets: [{
                 data: [data.completed, data.skipped, data.notDone],
-                backgroundColor: ['#4ade80', '#fbbf24', '#f87171'],
+                backgroundColor: ['#22c55e', '#94a3b8', '#ef4444'],
                 borderWidth: 2,
                 borderColor: '#ffffff'
             }]
@@ -1183,10 +1264,10 @@ function createWeeklyProgressCard(habit) {
                 statusColor = '#22c55e';  // Green
                 completedCount++;
             } else if (entry.status === 'skipped') {
-                // STATE 2: SKIPPED (yellow) - maintains streak
+                // STATE 2: SKIPPED (gray/muted) - maintains streak
                 status = 'skipped';
                 statusClass = 'skipped';
-                statusColor = '#eab308';  // Yellow
+                statusColor = '#94a3b8';  // Muted gray-blue
                 skippedCount++;
             } else {
                 // STATE 3: Other status treated as missed
@@ -1241,7 +1322,7 @@ function createWeeklyProgressCard(habit) {
                         ${completedCount}
                     </span>
                     <span class="stat-mini skipped" title="Skipped">
-                        <span class="stat-dot" style="background: #eab308;">●</span>
+                        <span class="stat-dot" style="background: #94a3b8;">●</span>
                         ${skippedCount}
                     </span>
                     <span class="stat-mini missed" title="Missed">
@@ -1290,7 +1371,7 @@ function createWeeklyProgressCard(habit) {
                     <span>Completed</span>
                 </div>
                 <div class="legend-item">
-                    <span class="legend-dot" style="background: #eab308;">●</span>
+                    <span class="legend-dot" style="background: #94a3b8;">●</span>
                     <span>Skipped (Allowed)</span>
                 </div>
                 <div class="legend-item">

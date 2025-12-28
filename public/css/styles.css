@@ -278,17 +278,21 @@ body {
 
 .btn-logout {
     padding: 10px 20px;
-    background: linear-gradient(135deg, var(--color-error-dark), var(--color-error));
+    background: var(--color-error);
     color: white;
+    border: 2px solid var(--color-error);
     border-radius: 10px;
     font-size: 0.95rem;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+    cursor: pointer;
 }
 
 .btn-logout:hover {
+    background: #DC2626;
+    border-color: #DC2626;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
@@ -1013,8 +1017,8 @@ button:active,
 }
 
 .skipped-status {
-    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
-    border: 3px solid #eab308;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    border: 3px solid #94a3b8;
 }
 
 .notdone-status {
@@ -1100,7 +1104,7 @@ button:active,
 }
 
 .legend-dot.skipped {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: linear-gradient(135deg, #cbd5e1, #94a3b8);
 }
 
 .legend-dot.missed {
@@ -1410,6 +1414,23 @@ button:active,
     border-radius: 16px 0 0 16px;
 }
 
+/* Skipped state - subtle neutral indication */
+.habit-card.skipped-today {
+    background: linear-gradient(135deg, #fefffe 0%, #f8fafc 100%);
+    border-color: #cbd5e1;
+}
+
+.habit-card.skipped-today::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #94a3b8, #64748b);
+    border-radius: 16px 0 0 16px;
+}
+
 /* Card Header - Title and Streak */
 .habit-card-header {
     display: flex;
@@ -1481,6 +1502,12 @@ button:active,
     border: 1px solid #bbf7d0;
 }
 
+.status-badge.status-skipped {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
 .status-badge.status-in-progress {
     background: #fef3c7;
     color: #92400e;
@@ -1549,6 +1576,25 @@ button:active,
 }
 
 .btn-start:active {
+    transform: translateY(0);
+}
+
+.btn-skip {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 3px rgba(100, 116, 139, 0.1);
+}
+
+.btn-skip:hover {
+    background: #e2e8f0;
+    color: #475569;
+    border-color: #94a3b8;
+    box-shadow: 0 2px 6px rgba(100, 116, 139, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-skip:active {
     transform: translateY(0);
 }
 
@@ -2218,20 +2264,20 @@ button:active,
 
 .day-item.skipped,
 .day-cell.skipped {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #eab308;
-    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    border-color: #94a3b8;
+    box-shadow: 0 4px 12px rgba(148, 163, 184, 0.3);
 }
 
 .day-cell.skipped .day-status-icon {
-    color: #eab308 !important;
+    color: #94a3b8 !important;
     font-size: 2.5rem;
     font-weight: bold;
 }
 
 .day-item.skipped .day-status,
 .day-cell.skipped .day-status {
-    color: #d97706;
+    color: #64748b;
 }
 
 .day-item.incomplete,
