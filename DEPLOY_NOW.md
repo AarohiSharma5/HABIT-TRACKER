@@ -123,6 +123,12 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete VPS setup guide with:
 
 ## 🔑 Required Environment Variables
 
+**\u26a0\ufe0f CRITICAL SECURITY NOTICE:**
+- **NEVER** hardcode credentials in code or documentation
+- **NEVER** commit .env file to Git (it's gitignored)
+- **ALWAYS** use environment variables for sensitive data
+- **ALWAYS** use different credentials for dev/staging/production
+
 **Absolutely Required:**
 ```env
 NODE_ENV=production
@@ -151,12 +157,24 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 2. Create free cluster (M0)
 3. Create database user
 4. Get connection string
-5. Replace `<password>` with your password
+5. Replace `<password>` with your database user password
 
-Example:
+**Connection String Format:**
 ```
-mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/habit-tracker?retryWrites=true&w=majority
+mongodb+srv://<username>:<password>@<cluster-url>/habit-tracker?retryWrites=true&w=majority
 ```
+
+**\u26a0\ufe0f CRITICAL SECURITY WARNINGS:**
+- Never include real credentials in code or documentation
+- Replace all placeholders `<username>`, `<password>`, `<cluster-url>` with your actual values
+- Store connection strings ONLY in environment variables
+- Never commit .env file (it's already in .gitignore)
+- Use deployment platform's environment variable settings for production
+
+**⚠️ SECURITY WARNING:**
+- Replace `<username>`, `<password>`, and `<cluster-url>` with your actual MongoDB Atlas credentials
+- Never commit this connection string to Git
+- Store it only in environment variables or .env file (which is gitignored)
 
 ## 📋 Pre-Flight Checklist
 

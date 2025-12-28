@@ -100,6 +100,8 @@ HABIT TRACKER/
 
 ## 🚀 Quick Start
 
+**\u26a0\ufe0f Security Notice:** This project uses environment variables for all sensitive data. Never commit credentials to Git!
+
 ### Prerequisites
 
 - **Node.js** v18+ and npm
@@ -137,6 +139,12 @@ HABIT TRACKER/
    FIREBASE_PROJECT_ID=your-project-id
    # ... other Firebase credentials
    ```
+   
+   **\u26a0\ufe0f Security:** 
+   - The `.env` file is gitignored and will never be committed
+   - Never share your .env file or commit it to version control
+   - Use different credentials for development and production
+   - See [CREDENTIALS_SECURITY.md](CREDENTIALS_SECURITY.md) for detailed security guide
 
 4. **Start MongoDB** (if running locally)
    ```bash
@@ -311,8 +319,10 @@ See `.env.example` for all available options.
 NODE_ENV=production
 PORT=3000
 SESSION_SECRET=<64-char-random-string>
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database>
 ```
+
+**⚠️ Replace placeholders with actual values. Never commit credentials to Git!**
 
 **Generate secure session secret:**
 ```bash
@@ -348,7 +358,8 @@ See [GOOGLE_SIGNIN_FIX.md](GOOGLE_SIGNIN_FIX.md) for detailed setup.
 - Verify SESSION_SECRET is set
 - Check MongoDB connection (sessions stored there)
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for more troubleshooting.
+See [CREDENTIALS_SECURITY.md](CREDENTIALS_SECURITY.md)** - 🔒 **How to handle secrets safely**
+- **[DEPLOYMENT.md](DEPLOYMENT.md) for more troubleshooting.
 
 ## 📚 Documentation
 
@@ -428,6 +439,13 @@ ISC License - see LICENSE file
    SESSION_SECRET=your-secret-key-here
    NODE_ENV=development
    ```
+   
+   **For MongoDB Atlas (production):**
+   ```env
+   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/habit-tracker
+   ```
+   
+   **⚠️ Never commit the `.env` file!**
 
 4. **Start MongoDB** (if running locally)
    ```bash

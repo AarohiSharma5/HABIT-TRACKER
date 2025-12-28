@@ -12,6 +12,14 @@ Before deploying, ensure you have:
 
 ## Quick Start Deployment
 
+**\u26a0\ufe0f SECURITY FIRST:**
+Before deploying, read this:
+- Never commit .env file (it's in .gitignore)
+- Never hardcode credentials in code
+- Use environment variables for all sensitive data
+- Use different credentials for development and production
+- Generate strong random strings for SESSION_SECRET
+
 ### 1. Environment Setup
 
 Copy the example environment file and configure it:
@@ -26,10 +34,12 @@ Edit `.env` and set all required values:
 NODE_ENV=production
 PORT=3000
 SESSION_SECRET=your-generated-secret-here
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/habit-tracker
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/habit-tracker
 FIREBASE_API_KEY=your-firebase-api-key
 # ... other Firebase credentials
 ```
+
+**⚠️ Important:** Replace placeholders with your actual credentials. Never commit the .env file!
 
 **Generate a secure session secret:**
 
@@ -273,10 +283,16 @@ pm2 monit                # Monitor resources
    - Copy connection string
    - Replace `<password>` with your database user password
 
-Example connection string:
+**Connection String Format:**
 ```
-mongodb+srv://username:password@cluster0.abcde.mongodb.net/habit-tracker?retryWrites=true&w=majority
+mongodb+srv://<username>:<password>@<cluster-url>/habit-tracker?retryWrites=true&w=majority
 ```
+
+**\u26a0\ufe0f SECURITY WARNING:**
+- Replace all `<placeholders>` with your actual credentials
+- Never commit connection strings to Git
+- Store only in environment variables
+- See [CREDENTIALS_SECURITY.md](CREDENTIALS_SECURITY.md) for security guide
 
 ## Firebase Configuration
 
@@ -396,6 +412,11 @@ Railway/Render: Check dashboard logs
 **Self-hosted MongoDB:**
 ```bash
 mongodump --uri="mongodb://localhost:27017/habit-tracker" --out=/backup/$(date +%Y%m%d)
+```
+
+**For MongoDB Atlas:**
+```bash
+mongodump --uri="mongodb+srv://<username>:<password>@<cluster-url>/habit-tracker" --out=/backup/$(date +%Y%m%d)
 ```
 
 ### Updates
