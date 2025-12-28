@@ -217,6 +217,12 @@ async function addHabit(e) {
             await loadHabits();
             updateQuickStats();
             displayHabits();
+            
+            // FIXED: Refresh achievements after creating new habit
+            if (document.getElementById('achievements-grid')) {
+                renderAchievements();
+            }
+            
             document.getElementById('habit-form').reset();
             showMessage('Habit added successfully! 🎉', 'success');
         }
@@ -504,6 +510,14 @@ async function submitHabitCompletion(habitId, duration, reflection) {
             displayHabits();
             refreshWeeklyProgress();
             
+            // FIXED: Refresh achievements and badges after completion
+            if (document.getElementById('achievements-grid')) {
+                renderAchievements();
+            }
+            if (document.getElementById('badges-container')) {
+                renderBadges();
+            }
+            
             const mins = Math.floor(duration / 60);
             const secs = duration % 60;
             showMessage(`🎉 ${data.message || 'Great job!'} (${mins}m ${secs}s)`, 'success');
@@ -579,6 +593,12 @@ window.deleteHabit = async function(habitId) {
             await loadHabits();
             updateQuickStats();
             displayHabits();
+            
+            // FIXED: Refresh achievements after deleting habit
+            if (document.getElementById('achievements-grid')) {
+                renderAchievements();
+            }
+            
             showMessage('Habit deleted', 'success');
         }
     } catch (error) {
@@ -1512,6 +1532,9 @@ async function loadProfile() {
             // FIXED: Render badges for all habits
             renderBadges();
             
+            // FIXED: Render achievements dynamically
+            renderAchievements();
+            
             // Hide loading, show content
             const loading = document.querySelector('.profile-loading');
             const content = document.querySelector('.profile-content');
@@ -1573,8 +1596,176 @@ function renderBadges() {
         
         container.appendChild(badgeItem);
     });
+}
+
+/**
+ * FIXED: Render achievements dynamically based on user progress
+ * Automatically unlocks achievements when conditions are met
+ */
+function renderAchievements() {
+    const container = document.getElementById('achievements-grid');
+    if (!container) return;
     
-    console.log(`[Badges] Rendered ${badgeLevels.length} badges. Max streak: ${maxStreak}`);
+    // Clear existing achievements
+    container.innerHTML = '';
+    
+    // Calculate stats for achievement unlocks
+    const totalHabits = habits.length;
+    const maxStreak = habits.reduce((max, h) => Math.max(max, h.streak || 0), 0);
+    
+    // Calculate total completions across all habits
+    let totalCompletions = 0;
+    habits.forEach(habit => {
+        const completed = habit.completionHistory?.filter(e => e.status === 'completed').length || 0;
+        totalCompletions += completed;
+    });
+    
+    // Check for perfect week (all habits completed every day for 7 consecutive days)
+    let hasPerfectWeek = false;
+    if (habits.length > 0) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let consecutiveDays = 0;
+        
+        for (let i = 0; i < 7; i++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(today.getDate() - i);
+            checkDate.setHours(0, 0, 0, 0);
+            
+            const allCompletedOnDate = habits.every(habit => {
+                return habit.completionHistory?.some(entry => {
+                    const entryDate = new Date(entry.date);
+                    entryDate.setHours(0, 0, 0, 0);
+                    return entryDate.getTime() === checkDate.getTime() && entry.status === 'completed';
+                });
+            });
+            
+            if (allCompletedOnDate) {
+                consecutiveDays++;
+            } else {
+                break;
+            }
+        }
+        
+        hasPerfectWeek = consecutiveDays >= 7;
+    }
+    
+    // Define achievement criteria
+    const achievements = [
+        {
+            id: 'first-habit',
+            icon: '🌱',
+            name: 'First Habit',
+            description: 'Create your first habit',
+            unlocked: totalHabits >= 1
+        },
+        {
+            id: 'habit-collector',
+            icon: '📚',
+            name: 'Habit Collector',
+            description: 'Track 5 different habits',
+            unlocked: totalHabits >= 5
+        },
+        {
+            id: 'habit-master',
+            icon: '👑',
+            name: 'Habit King',
+            description: 'Track 10+ habits',
+            unlocked: totalHabits >= 10
+        },
+        {
+            id: 'streak-starter',
+            icon: '⚡',
+            name: 'Streak Starter',
+            description: 'Maintain a 3-day streak',
+            unlocked: maxStreak >= 3
+        },
+        {
+            id: 'streak-master',
+            icon: '🔥',
+            name: 'Streak Master',
+            description: 'Maintain a 7-day streak',
+            unlocked: maxStreak >= 7
+        },
+        {
+            id: 'on-fire',
+            icon: '💥',
+            name: 'On Fire!',
+            description: '30-day streak achieved',
+            unlocked: maxStreak >= 30
+        },
+        {
+            id: 'dedicated',
+            icon: '💪',
+            name: 'Dedicated',
+            description: 'Complete 30 habits total',
+            unlocked: totalCompletions >= 30
+        },
+        {
+            id: 'committed',
+            icon: '🎯',
+            name: 'Committed',
+            description: 'Complete 100 habits total',
+            unlocked: totalCompletions >= 100
+        },
+        {
+            id: 'unstoppable',
+            icon: '🚀',
+            name: 'Unstoppable',
+            description: 'Complete 365 habits total',
+            unlocked: totalCompletions >= 365
+        },
+        {
+            id: 'perfect-week',
+            icon: '✨',
+            name: 'Perfect Week',
+            description: 'Complete all habits for 7 days',
+            unlocked: hasPerfectWeek
+        },
+        {
+            id: 'century-club',
+            icon: '🏆',
+            name: 'Century Club',
+            description: '100-day streak achieved',
+            unlocked: maxStreak >= 100
+        },
+        {
+            id: 'legend',
+            icon: '⭐',
+            name: 'Legend',
+            description: '365-day streak achieved',
+            unlocked: maxStreak >= 365
+        }
+    ];
+    
+    // Render each achievement
+    achievements.forEach(achievement => {
+        const card = document.createElement('div');
+        card.className = `achievement-card ${achievement.unlocked ? 'achievement-unlocked' : 'achievement-locked'}`;
+        
+        // Add unlock date if available (from achievements in profile)
+        let dateHTML = '';
+        if (achievement.unlocked) {
+            dateHTML = '<div class="achievement-date">Unlocked!</div>';
+        }
+        
+        card.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-name">${achievement.name}</div>
+            <div class="achievement-desc">${achievement.description}</div>
+            ${dateHTML}
+        `;
+        
+        // Add animation for newly unlocked achievements
+        if (achievement.unlocked) {
+            card.style.animation = 'achievementPulse 1s ease-out';
+        }
+        
+        container.appendChild(card);
+    });
+    
+    const unlockedCount = achievements.filter(a => a.unlocked).length;
+    console.log(`[Achievements] Rendered ${achievements.length} achievements. Unlocked: ${unlockedCount}`);
 }
 
 // ========== Profile Edit Functions ==========
