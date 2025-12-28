@@ -320,6 +320,53 @@ habitSchema.methods.meetsMinimumDuration = function() {
 };
 
 /**
+ * Reset daily status if it's a new day
+ * Called on habit fetch to ensure status reflects only today's state
+ * 
+ * DAILY RESET LOGIC:
+ * - If status is 'completed' or 'in-progress', check if it was from a previous day
+ * - If lastCompleted or completedAt is not today, reset status to 'idle'
+ * - Preserves completionHistory (past data remains intact)
+ * - Does NOT affect streaks (streak logic uses completionHistory)
+ * 
+ * WHY THIS MATTERS:
+ * - Habits completed yesterday should appear fresh today
+ * - UI shows only TODAY's status, not yesterday's
+ * - Automatic reset on page load or app start
+ */
+habitSchema.methods.resetDailyStatus = function() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check if there's an entry for today in completionHistory
+    const todayEntry = this.completionHistory.find(entry => {
+        const d = new Date(entry.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+    });
+    
+    // If habit status is 'completed' but no entry for today, reset it
+    if (this.status === 'completed' && !todayEntry) {
+        this.status = 'idle';
+        this.startedAt = null;
+        this.completedAt = null;
+        this.pausedDuration = 0;
+    }
+    
+    // If habit status is 'in-progress' but startedAt is from yesterday, reset it
+    if (this.status === 'in-progress' && this.startedAt) {
+        const startDate = new Date(this.startedAt);
+        startDate.setHours(0, 0, 0, 0);
+        if (startDate.getTime() < today.getTime()) {
+            this.status = 'idle';
+            this.startedAt = null;
+            this.completedAt = null;
+            this.pausedDuration = 0;
+        }
+    }
+};
+
+/**
  * Get elapsed time since starting habit (in minutes)
  * Returns 0 if not started
  * 

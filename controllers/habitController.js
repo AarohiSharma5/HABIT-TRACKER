@@ -121,6 +121,19 @@ exports.getAllHabits = async (req, res) => {
         const userId = req.session.userId;
         const habits = await Habit.findActive(userId);
         
+        // Reset daily status for each habit if it's a new day
+        // This ensures UI reflects only today's status
+        let needsSave = false;
+        for (const habit of habits) {
+            const previousStatus = habit.status;
+            habit.resetDailyStatus();
+            // Only save if status actually changed
+            if (previousStatus !== habit.status) {
+                needsSave = true;
+                await habit.save();
+            }
+        }
+        
         res.json({
             success: true,
             habits: habits,
