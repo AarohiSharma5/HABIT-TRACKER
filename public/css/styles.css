@@ -1475,6 +1475,43 @@ button:active,
     border: 1px solid #fed7aa;
 }
 
+/* Badges section - Accountability and minimum duration */
+.habit-card-badges {
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+}
+
+.accountability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #78350f;
+    border: 1px solid #fbbf24;
+    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.1);
+}
+
+.min-duration-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    color: #0369a1;
+    font-weight: 500;
+    padding: 0.5rem 0.875rem;
+    background: #e0f2fe;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+}
+
 /* Status section - Timer and badges */
 .habit-card-status {
     margin-bottom: 1.25rem;

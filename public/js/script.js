@@ -438,32 +438,61 @@ window.completeHabitWithTime = async function(habitId) {
 /**
  * Show reflection modal
  * Requires user to reflect before marking habit as complete
+ * For accountability mode habits, requires more detailed reflection (50+ characters)
  */
 function showReflectionModal(habitId, duration) {
     const modal = document.getElementById('reflection-modal');
     const input = document.getElementById('reflection-input');
     const charCount = document.getElementById('reflection-char-count');
     const form = document.getElementById('reflection-form');
+    const modalTitle = modal.querySelector('h2');
+    const modalSubtitle = modal.querySelector('.modal-subtitle');
+    
+    // Find the habit to check if accountability mode is enabled
+    const habit = habits.find(h => h._id === habitId);
+    const isAccountabilityMode = habit?.accountabilityMode || false;
+    const minChars = isAccountabilityMode ? 50 : 5;
+    
+    // Update modal title and subtitle for accountability mode
+    if (isAccountabilityMode) {
+        modalTitle.textContent = '🔒 Accountability Mode';
+        modalSubtitle.textContent = 'This habit requires detailed proof. Please describe what you did in detail (minimum 50 characters).';
+        input.placeholder = 'Provide detailed description of what you accomplished... (minimum 50 characters for accountability mode)';
+    } else {
+        modalTitle.textContent = '✍️ Reflection Time';
+        modalSubtitle.textContent = 'Before marking this habit as complete, take a moment to reflect on what you did.';
+        input.placeholder = 'Describe what you accomplished... (minimum 5 characters)';
+    }
     
     // Clear previous input
     input.value = '';
     charCount.textContent = '0 characters';
     charCount.style.color = '#64748b';
     
-    // Update character count
-    input.addEventListener('input', () => {
+    // Update character count with dynamic requirement
+    const updateCharCount = () => {
         const length = input.value.trim().length;
-        charCount.textContent = `${length} characters`;
-        charCount.style.color = length >= 5 ? '#10b981' : '#64748b';
-    });
+        charCount.textContent = `${length} / ${minChars} characters minimum`;
+        if (length >= minChars) {
+            charCount.style.color = '#10b981';
+        } else if (length >= minChars * 0.5) {
+            charCount.style.color = '#f59e0b';
+        } else {
+            charCount.style.color = '#64748b';
+        }
+    };
+    
+    input.addEventListener('input', updateCharCount);
     
     // Handle form submission
     form.onsubmit = async (e) => {
         e.preventDefault();
         const reflection = input.value.trim();
         
-        if (reflection.length < 5) {
-            showMessage('Please write at least 5 characters in your reflection', 'error');
+        if (reflection.length < minChars) {
+            const remaining = minChars - reflection.length;
+            const modeText = isAccountabilityMode ? ' (accountability mode requires detailed proof)' : '';
+            showMessage(`Please write at least ${remaining} more character${remaining > 1 ? 's' : ''} in your reflection${modeText}`, 'error');
             return;
         }
         
@@ -475,6 +504,7 @@ function showReflectionModal(habitId, duration) {
     // Show modal
     modal.style.display = 'flex';
     input.focus();
+    updateCharCount();
 }
 
 /**
@@ -702,6 +732,18 @@ function createHabitElement(habit) {
     
     const frequencyText = habit.daysPerWeek === 7 ? 'Daily' : `${habit.daysPerWeek} days/week`;
     
+    // Show accountability badge if enabled
+    let accountabilityBadge = '';
+    if (habit.accountabilityMode) {
+        accountabilityBadge = '<span class="accountability-badge" title="Accountability mode: Extra proof required">🔒 Accountability</span>';
+    }
+    
+    // Show minimum duration indicator if set and habit is idle
+    let minDurationInfo = '';
+    if (habit.minimumDuration && habit.status === 'idle') {
+        minDurationInfo = `<div class="min-duration-info" title="Minimum time requirement">⏱️ Minimum: ${habit.minimumDuration} min</div>`;
+    }
+    
     // Format completion time if completed today
     let completionInfo = '';
     if (isCompletedToday && habit.completedAt) {
@@ -753,6 +795,13 @@ function createHabitElement(habit) {
                 </div>
                 <span class="habit-card-streak">🔥 ${habit.streak || 0}</span>
             </div>
+            
+            ${accountabilityBadge || minDurationInfo ? `
+                <div class="habit-card-badges">
+                    ${accountabilityBadge}
+                    ${minDurationInfo}
+                </div>
+            ` : ''}
             
             ${statusBadge || timerDisplay ? `
                 <div class="habit-card-status">
