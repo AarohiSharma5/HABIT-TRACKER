@@ -39,13 +39,45 @@ if (process.env.FIREBASE_PROJECT_ID) {
 
 // ========== Middleware Configuration ==========
 
+// Security headers for production
+if (process.env.NODE_ENV === 'production') {
+    // Trust proxy - required for secure cookies behind reverse proxy
+    app.set('trust proxy', 1);
+    
+    // Security headers
+    app.use((req, res, next) => {
+        // Content Security Policy
+        res.setHeader(
+            'Content-Security-Policy',
+            "default-src 'self'; " +
+            "script-src 'self' https://www.gstatic.com; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com; " +
+            "frame-src 'none'; " +
+            "object-src 'none'; " +
+            "base-uri 'self';"
+        );
+        
+        // Other security headers
+        res.setHeader('X-Frame-Options', 'DENY');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('X-XSS-Protection', '1; mode=block');
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        res.removeHeader('X-Powered-By');
+        
+        next();
+    });
+}
+
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Parse incoming request bodies (JSON and URL-encoded)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Allow PUT and DELETE methods in forms
 app.use(methodOverride('_method'));
@@ -64,8 +96,12 @@ app.use(session({
         touchAfter: 24 * 3600 // Update session once per 24 hours unless changed
     }),
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
-    }
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        httpOnly: true, // Prevent XSS attacks
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        sameSite: 'lax' // CSRF protection
+    },
+    name: 'sessionId' // Custom name (don't reveal tech stack)
 }));
 
 // ========== Routes ==========
@@ -145,14 +181,38 @@ app.use((err, req, res, next) => {
     });
 });
 
+// ========== Environment Validation ==========
+
+// Validate required environment variables
+const requiredEnvVars = ['MONGODB_URI', 'SESSION_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0 && process.env.NODE_ENV === 'production') {
+    console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+    process.exit(1);
+}
+
 // ========== Start Server ==========
 
 const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`🚀 Server is running on ${isProduction ? 'production' : `http://localhost:${PORT}`}`);
     console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`\n🌐 Open your browser and navigate to: http://localhost:${PORT}`);
+    
+    if (!isProduction) {
+        console.log(`\n🌐 Open your browser and navigate to: http://localhost:${PORT}`);
+    }
+    
+    // Production readiness check
+    if (isProduction) {
+        console.log('✅ Production mode: Security headers enabled');
+        console.log('✅ Secure cookies enabled');
+        console.log('✅ CSP headers enabled');
+    } else {
+        console.log('⚠️  Development mode: Some security features disabled');
+    }
 });
 
 // Handle unhandled promise rejections

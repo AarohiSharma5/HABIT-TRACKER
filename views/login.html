@@ -245,6 +245,91 @@
             opacity: 0.6;
             pointer-events: none;
         }
+
+        /* Mobile & Tablet Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .auth-container {
+                padding: 35px 25px;
+                border-radius: 16px;
+            }
+
+            .logo h1 {
+                font-size: 1.75rem;
+            }
+
+            .logo p {
+                font-size: 0.85rem;
+            }
+
+            .btn-google,
+            .btn-primary {
+                padding: 14px;
+                font-size: 0.95rem;
+            }
+
+            .form-group input {
+                padding: 11px 12px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .toggle-password {
+                padding: 8px;
+                font-size: 1.3rem;
+            }
+
+            .divider {
+                margin: 20px 0;
+            }
+
+            .switch-auth {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .auth-container {
+                padding: 30px 20px;
+                border-radius: 12px;
+            }
+
+            .logo h1 {
+                font-size: 1.5rem;
+            }
+
+            .logo {
+                margin-bottom: 30px;
+            }
+
+            .form-group {
+                margin-bottom: 16px;
+            }
+
+            .alert {
+                padding: 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .btn-google:hover,
+            .btn-primary:hover {
+                transform: none;
+            }
+
+            .btn-google:active,
+            .btn-primary:active {
+                transform: scale(0.98);
+            }
+        }
     </style>
 </head>
 <body>
