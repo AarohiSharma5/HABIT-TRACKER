@@ -2279,27 +2279,24 @@ function renderYearlyGrid(data) {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December'];
     
-    let currentMonth = 0;
-    let monthDays = [];
-    
-    yearData.forEach((day, index) => {
+    // Organize data by month
+    const monthsData = {};
+    yearData.forEach(day => {
         const date = new Date(day.date);
-        const month = date.getMonth();
+        const monthIndex = date.getMonth();
         
-        if (month !== currentMonth && monthDays.length > 0) {
-            // Render previous month
-            monthsContainer.appendChild(createMonthBlock(monthNames[currentMonth], monthDays));
-            monthDays = [];
-            currentMonth = month;
+        if (!monthsData[monthIndex]) {
+            monthsData[monthIndex] = [];
         }
-        
-        monthDays.push(day);
-        
-        // Handle last day
-        if (index === yearData.length - 1) {
-            monthsContainer.appendChild(createMonthBlock(monthNames[currentMonth], monthDays));
-        }
+        monthsData[monthIndex].push(day);
     });
+    
+    // Render each month
+    for (let i = 0; i < 12; i++) {
+        if (monthsData[i]) {
+            monthsContainer.appendChild(createMonthBlock(monthNames[i], monthsData[i]));
+        }
+    }
     
     // Statistics
     const stats = calculateYearlyStats(yearData);
@@ -2342,21 +2339,59 @@ function createMonthBlock(monthName, days) {
     monthHeader.className = 'month-name';
     monthHeader.textContent = monthName;
     
+    // Add weekday labels
+    const weekdayLabels = document.createElement('div');
+    weekdayLabels.className = 'weekday-labels';
+    const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    weekdays.forEach(day => {
+        const label = document.createElement('div');
+        label.className = 'weekday-label';
+        label.textContent = day;
+        weekdayLabels.appendChild(label);
+    });
+    
     const daysGrid = document.createElement('div');
     daysGrid.className = 'days-grid';
     
+    // Add empty cells for days before the first day of the month
+    if (days.length > 0) {
+        const firstDate = new Date(days[0].date);
+        const firstDayOfWeek = firstDate.getDay(); // 0 = Sunday, 6 = Saturday
+        
+        // Add empty cells
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'day-cell empty';
+            daysGrid.appendChild(emptyCell);
+        }
+    }
+    
+    // Add actual day cells
     days.forEach(day => {
         const dayCell = document.createElement('div');
-        dayCell.className = `day-cell ${day.status}`;
-        dayCell.title = formatDateForTooltip(day.date, day.status);
-        
         const date = new Date(day.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayDate = new Date(day.date);
+        dayDate.setHours(0, 0, 0, 0);
+        
+        // Check if this is today
+        const isToday = dayDate.getTime() === today.getTime();
+        
+        dayCell.className = `day-cell ${day.status}${isToday ? ' today' : ''}`;
+        dayCell.title = formatDateForTooltip(day.date, day.status, isToday);
+        
         dayCell.textContent = date.getDate();
+        
+        // Add data attribute for enhanced tooltips
+        dayCell.setAttribute('data-date', day.date);
+        dayCell.setAttribute('data-status', day.status);
         
         daysGrid.appendChild(dayCell);
     });
     
     monthDiv.appendChild(monthHeader);
+    monthDiv.appendChild(weekdayLabels);
     monthDiv.appendChild(daysGrid);
     
     return monthDiv;
@@ -2387,19 +2422,27 @@ function calculateYearlyStats(yearData) {
 /**
  * Format date for tooltip
  */
-function formatDateForTooltip(dateStr, status) {
+function formatDateForTooltip(dateStr, status, isToday = false) {
     const date = new Date(dateStr);
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const formatted = date.toLocaleDateString('en-US', options);
     
+    const statusIcons = {
+        'completed': '✅',
+        'skipped': '⏭️',
+        'missed': '❌',
+        'future': '📅'
+    };
+    
     const statusText = {
-        'completed': 'Completed ✓',
+        'completed': 'Completed',
         'skipped': 'Skipped',
         'missed': 'Missed',
         'future': 'Future date'
     };
     
-    return `${formatted} - ${statusText[status] || status}`;
+    const todayText = isToday ? ' (TODAY)' : '';
+    return `${statusIcons[status]} ${formatted}${todayText}\nStatus: ${statusText[status] || status}`;
 }
 
 // Make functions global

@@ -124,9 +124,12 @@ exports.getYearlyData = async (req, res) => {
             }
             
             yearData.push({
-                date: currentDate,
+                date: currentDate.toISOString(),
                 status: status,
-                dayOfYear: i + 1
+                dayOfYear: i + 1,
+                dayOfWeek: currentDate.getDay(),
+                month: currentDate.getMonth(),
+                dayOfMonth: currentDate.getDate()
             });
         }
         
