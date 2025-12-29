@@ -50,27 +50,13 @@ function initializeFirebase() {
  */
 async function verifyIdToken(idToken) {
     try {
-        // Verify token with additional security checks
-        const decodedToken = await admin.auth().verifyIdToken(idToken, true); // checkRevoked = true
-        
-        // Additional security validations
-        const now = Math.floor(Date.now() / 1000);
-        
-        // Check if token is too old (issued more than 1 hour ago)
-        if (decodedToken.auth_time && (now - decodedToken.auth_time) > 3600) {
-            throw new Error('Token expired. Please sign in again.');
-        }
-        
-        // Verify token issuer
-        const expectedIssuer = `https://securetoken.google.com/${process.env.FIREBASE_PROJECT_ID}`;
-        if (decodedToken.iss !== expectedIssuer) {
-            throw new Error('Invalid token issuer');
-        }
-        
-        // Verify audience matches project ID
-        if (decodedToken.aud !== process.env.FIREBASE_PROJECT_ID) {
-            throw new Error('Invalid token audience');
-        }
+        // Verify token with checkRevoked enabled
+        // Firebase Admin SDK automatically validates:
+        // - Token signature
+        // - Token expiration
+        // - Token issuer (must be from this Firebase project)
+        // - Token audience (must match project ID)
+        const decodedToken = await admin.auth().verifyIdToken(idToken, true);
         
         // Return the decoded token directly
         return decodedToken;
