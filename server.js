@@ -46,22 +46,22 @@ if (process.env.NODE_ENV === 'production') {
     
     // Security headers
     app.use((req, res, next) => {
-        // Content Security Policy
+        // Content Security Policy - Updated for Firebase Google Sign-In
         res.setHeader(
             'Content-Security-Policy',
             "default-src 'self'; " +
-            "script-src 'self' https://www.gstatic.com; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: https:; " +
-            "font-src 'self' data:; " +
-            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com; " +
-            "frame-src 'none'; " +
+            "script-src 'self' https://www.gstatic.com https://apis.google.com; " +
+            "style-src 'self' 'unsafe-inline' https://www.gstatic.com; " +
+            "img-src 'self' data: https: https://lh3.googleusercontent.com; " +
+            "font-src 'self' data: https://www.gstatic.com; " +
+            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; " +
+            "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; " +
             "object-src 'none'; " +
             "base-uri 'self';"
         );
         
         // Other security headers
-        res.setHeader('X-Frame-Options', 'DENY');
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // Changed from DENY to allow Firebase iframe
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('X-XSS-Protection', '1; mode=block');
         res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
