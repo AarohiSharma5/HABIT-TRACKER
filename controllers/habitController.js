@@ -89,9 +89,30 @@ exports.getYearlyData = async (req, res) => {
             });
         }
         
+        // Get user signup date
+        const User = require('../models/User');
+        const user = await User.findById(userId).select('createdAt');
+        
         const targetYear = year ? parseInt(year) : new Date().getFullYear();
         const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
         const daysInYear = isLeapYear ? 366 : 365;
+        
+        // Determine earliest tracking date
+        let earliestTrackingDate = null;
+        
+        if (user && user.createdAt) {
+            earliestTrackingDate = new Date(user.createdAt);
+            earliestTrackingDate.setHours(0, 0, 0, 0);
+        }
+        
+        if (habit.createdAt) {
+            const habitCreatedDate = new Date(habit.createdAt);
+            habitCreatedDate.setHours(0, 0, 0, 0);
+            
+            if (!earliestTrackingDate || habitCreatedDate > earliestTrackingDate) {
+                earliestTrackingDate = habitCreatedDate;
+            }
+        }
         
         // Create array for all days in the year
         const yearData = [];
@@ -107,6 +128,9 @@ exports.getYearlyData = async (req, res) => {
             // Check if this day is in the future
             const isFuture = currentDate > today;
             
+            // Check if this day is before signup/habit creation
+            const isBeforeEligible = earliestTrackingDate && currentDate < earliestTrackingDate;
+            
             // Find entry in completion history
             const entry = habit.completionHistory.find(h => {
                 const entryDate = new Date(h.date);
@@ -117,6 +141,8 @@ exports.getYearlyData = async (req, res) => {
             let status;
             if (isFuture) {
                 status = 'future';
+            } else if (isBeforeEligible) {
+                status = 'ineligible'; // Before signup/habit creation
             } else if (entry) {
                 status = entry.status; // 'completed' or 'skipped'
             } else {
@@ -204,6 +230,10 @@ exports.getAllHabits = async (req, res) => {
         const userId = req.session.userId;
         const habits = await Habit.findActive(userId);
         
+        // Get user data to send signup date to frontend
+        const User = require('../models/User');
+        const user = await User.findById(userId).select('createdAt');
+        
         // Reset daily status for each habit if it's a new day
         // This ensures UI reflects only today's status
         let needsSave = false;
@@ -220,7 +250,8 @@ exports.getAllHabits = async (req, res) => {
         res.json({
             success: true,
             habits: habits,
-            count: habits.length
+            count: habits.length,
+            userCreatedAt: user ? user.createdAt : null
         });
     } catch (error) {
         console.error('Error fetching habits:', error);

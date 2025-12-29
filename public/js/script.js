@@ -7,6 +7,7 @@
 const API_URL = '/api/habits';
 let habits = [];
 let currentUser = null; // Store current user profile data
+let userSignupDate = null; // Store user signup date for filtering pre-signup days
 let activeTimers = {}; // Store active timers: { habitId: { startTime, intervalId, notified } }
 let dailyChart = null;
 let categoryChart = null;
@@ -237,6 +238,13 @@ async function loadHabits() {
         
         if (data.success) {
             habits = data.habits;
+            
+            // Store user signup date for pre-signup filtering
+            if (data.userCreatedAt) {
+                userSignupDate = new Date(data.userCreatedAt);
+                userSignupDate.setHours(0, 0, 0, 0);
+                console.log('[Habit Tracker] User signup date:', userSignupDate.toISOString());
+            }
             
             // Clean up orphaned timers (timers for habits that are no longer in-progress)
             Object.keys(activeTimers).forEach(habitId => {
@@ -1350,16 +1358,36 @@ function createWeeklyProgressCard(habit) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Determine the earliest eligible tracking date for this habit
+    let earliestTrackingDate = null;
+    
+    if (userSignupDate) {
+        // Use user signup date
+        earliestTrackingDate = new Date(userSignupDate);
+    }
+    
+    if (habit.createdAt) {
+        const habitCreatedDate = new Date(habit.createdAt);
+        habitCreatedDate.setHours(0, 0, 0, 0);
+        
+        // Use the later of user signup or habit creation
+        if (!earliestTrackingDate || habitCreatedDate > earliestTrackingDate) {
+            earliestTrackingDate = habitCreatedDate;
+        }
+    }
+    
     // Calculate weekly stats for 7 consecutive days ending today
     let completedCount = 0;
     let skippedCount = 0;
     let missedCount = 0;
+    let ineligibleCount = 0; // Days before signup/habit creation
     
     const weekData = [];
     
     // Debug: Log the habit and its completion history
     console.log(`[Weekly Progress] Creating card for: ${habit.name}`);
     console.log('[Weekly Progress] Completion History:', habit.completionHistory);
+    console.log('[Weekly Progress] Earliest tracking date:', earliestTrackingDate ? earliestTrackingDate.toISOString() : 'none');
     
     // Generate 7 days (Sunday to Saturday) ending today
     for (let i = 6; i >= 0; i--) {
@@ -1369,6 +1397,9 @@ function createWeeklyProgressCard(habit) {
         
         const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
         const dayNameLower = dayNames[dayOfWeek].toLowerCase();
+        
+        // Check if this day is BEFORE user signup or habit creation
+        const isBeforeEligibleDate = earliestTrackingDate && date < earliestTrackingDate;
         
         // Check if this day is a designated rest day (skipDays)
         const isRestDay = habit.skipDays && habit.skipDays.includes(dayNameLower);
@@ -1386,7 +1417,14 @@ function createWeeklyProgressCard(habit) {
         let statusIcon = '●';         // Solid dot for all states
         let statusColor = '#ef4444';  // Red for missed
         
-        if (entry) {
+        if (isBeforeEligibleDate) {
+            // STATE 0: PRE-SIGNUP/INELIGIBLE (neutral gray, hollow dot)
+            status = 'ineligible';
+            statusClass = 'ineligible';
+            statusColor = '#d1d5db';  // Light gray
+            statusIcon = '○';  // Hollow dot
+            ineligibleCount++;
+        } else if (entry) {
             // Debug: Log entry details
             console.log(`[Weekly Progress] ${habit.name} - ${dayNames[dayOfWeek]}:`, {
                 date: date.toISOString(),
@@ -1440,11 +1478,12 @@ function createWeeklyProgressCard(habit) {
         });
     }
     
-    // Calculate metrics
+    // Calculate metrics (excluding ineligible days)
+    const eligibleDays = 7 - ineligibleCount;
     // Active days = completed + skipped (both maintain consistency)
     const activeDays = completedCount + skippedCount;
-    // Completion rate based on total 7 days
-    const completionRate = Math.round((completedCount / 7) * 100);
+    // Completion rate based on eligible days only
+    const completionRate = eligibleDays > 0 ? Math.round((completedCount / eligibleDays) * 100) : 0;
     
     // Build HTML with graph
     let html = `
@@ -1510,7 +1549,7 @@ function createWeeklyProgressCard(habit) {
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background: #94a3b8;">●</span>
-                    <span>Skipped (Allowed)</span>
+                    <span>Skipped</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background: #9ca3af;">○</span>
@@ -1518,14 +1557,20 @@ function createWeeklyProgressCard(habit) {
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background: #ef4444;">●</span>
-                    <span>Missed (Breaks Streak)</span>
+                    <span>Missed</span>
                 </div>
+                ${ineligibleCount > 0 ? `
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: #d1d5db;">○</span>
+                    <span>Before Signup</span>
+                </div>
+                ` : ''}
             </div>
             
             <!-- Streak & Active Days Info -->
             <div class="weekly-streak-info">
                 <span class="streak-badge">🔥 ${habit.streak || 0} day streak</span>
-                <span class="completion-text">${activeDays} of 7 active days (completed + skipped)</span>
+                <span class="completion-text">${activeDays} of ${eligibleDays} eligible days active</span>
             </div>
         </div>
     `;
@@ -2471,16 +2516,19 @@ function calculateYearlyStats(yearData) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Only count non-future days
-    const pastDays = yearData.filter(d => new Date(d.date) <= today);
+    // Only count eligible (non-future, non-ineligible) days
+    const eligibleDays = yearData.filter(d => {
+        const dayDate = new Date(d.date);
+        return dayDate <= today && d.status !== 'ineligible';
+    });
     
-    const completed = pastDays.filter(d => d.status === 'completed').length;
-    const skipped = pastDays.filter(d => d.status === 'skipped').length;
-    const missed = pastDays.filter(d => d.status === 'missed').length;
+    const completed = eligibleDays.filter(d => d.status === 'completed').length;
+    const skipped = eligibleDays.filter(d => d.status === 'skipped').length;
+    const missed = eligibleDays.filter(d => d.status === 'missed').length;
     
-    const totalPastDays = pastDays.length;
-    const completionRate = totalPastDays > 0 
-        ? Math.round(((completed + skipped) / totalPastDays) * 100) 
+    const totalEligibleDays = eligibleDays.length;
+    const completionRate = totalEligibleDays > 0 
+        ? Math.round(((completed + skipped) / totalEligibleDays) * 100) 
         : 0;
     
     return { completed, skipped, missed, completionRate };
@@ -2498,14 +2546,16 @@ function formatDateForTooltip(dateStr, status, isToday = false) {
         'completed': '✅',
         'skipped': '⏭️',
         'missed': '❌',
-        'future': '📅'
+        'future': '📅',
+        'ineligible': '⚪'
     };
     
     const statusText = {
         'completed': 'Completed',
         'skipped': 'Skipped',
         'missed': 'Missed',
-        'future': 'Future date'
+        'future': 'Future date',
+        'ineligible': 'Before signup'
     };
     
     const todayText = isToday ? ' (TODAY)' : '';

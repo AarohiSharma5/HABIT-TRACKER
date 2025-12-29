@@ -120,12 +120,27 @@ body {
 /* Mobile navbar brand adjustments */
 @media (max-width: 768px) {
     .navbar .nav-brand {
-        padding: 1rem 1.5rem;
-        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+        min-height: 60px;
     }
     
     .navbar .nav-brand h1 {
-        font-size: 1.5rem !important;
+        font-size: 1.25rem !important;
+        letter-spacing: -0.3px;
+    }
+}
+
+/* Extra small screens (phones) */
+@media (max-width: 480px) {
+    .navbar .nav-brand {
+        padding: 0.625rem 0.875rem;
+        gap: 0.5rem;
+        min-height: 55px;
+    }
+    
+    .navbar .nav-brand h1 {
+        font-size: 1.1rem !important;
     }
 }
 
@@ -187,13 +202,25 @@ body {
 /* Mobile profile icon */
 @media (max-width: 768px) {
     .profile-icon {
-        width: 45px;
-        height: 45px;
+        width: 38px;
+        height: 38px;
         border: 2px solid rgba(255, 255, 255, 0.9);
     }
     
     .profile-icon-text {
-        font-size: 1.1rem !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-icon {
+        width: 34px;
+        height: 34px;
+        border: 2px solid rgba(255, 255, 255, 0.9);
+    }
+    
+    .profile-icon-text {
+        font-size: 0.85rem !important;
     }
 }
 
@@ -2687,6 +2714,37 @@ button:active,
     color: #6b7280;
 }
 
+/* Ineligible days (before signup/habit creation) */
+.day-cell.ineligible,
+.day-item.ineligible {
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    border-color: #e5e7eb;
+    border-style: dashed;
+    box-shadow: none;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.day-cell.ineligible .day-status-icon,
+.day-item.ineligible .day-status-icon {
+    color: #d1d5db !important;
+    font-size: 2.5rem;
+    font-weight: normal;
+}
+
+.day-cell.ineligible .day-label,
+.day-cell.ineligible .day-date,
+.day-item.ineligible .day-label,
+.day-item.ineligible .day-date {
+    color: #9ca3af;
+}
+
+.day-cell.ineligible:hover,
+.day-item.ineligible:hover {
+    transform: none;
+    box-shadow: none;
+}
+
 .day-cell.skipday {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border-color: #94a3b8;
@@ -2962,6 +3020,22 @@ button:active,
     opacity: 0.4;
     cursor: not-allowed !important;
     filter: grayscale(0.5);
+}
+
+/* Ineligible days for yearly view (before signup) */
+.day-item.ineligible,
+.day-cell.ineligible {
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    border-color: #e5e7eb !important;
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    color: #d1d5db !important;
+}
+
+.day-item.ineligible:hover,
+.day-cell.ineligible:hover {
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Habit actions */
@@ -5115,6 +5189,200 @@ footer {
 @media (min-width: 1400px) {
     .yearly-months-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ========== Mobile Responsive Fixes for Weekly Progress ========== */
+@media (max-width: 768px) {
+    /* Weekly card container - enable vertical stacking */
+    #weekly-progress-container {
+        padding: 0;
+    }
+    
+    /* Weekly cards - reduce padding, keep full width */
+    .weekly-card {
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        border-radius: 16px;
+    }
+    
+    /* Weekly card header - stack vertically on small screens */
+    .weekly-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    /* Habit name - smaller font */
+    .weekly-habit-name {
+        font-size: 1.15rem;
+        line-height: 1.3;
+    }
+    
+    .weekly-habit-schedule {
+        font-size: 0.75rem;
+    }
+    
+    /* Stats mini - wrap and reduce size */
+    .weekly-stats-mini {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .stat-mini {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+    }
+    
+    /* Weekly grid - enable horizontal scroll or shrink day cells */
+    .weekly-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+    }
+    
+    /* Day cells - shrink proportionally */
+    .day-cell {
+        min-width: 45px;
+        min-height: 80px;
+        padding: 8px 4px;
+    }
+    
+    .day-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.3px;
+    }
+    
+    .day-date {
+        font-size: 0.65rem;
+        margin-top: 2px;
+    }
+    
+    .day-status-icon {
+        font-size: 1.75rem !important;
+        margin-top: 4px;
+    }
+    
+    .today-badge {
+        font-size: 0.55rem;
+        padding: 3px 6px;
+        top: -6px;
+        right: -6px;
+    }
+    
+    /* Progress bar - maintain visibility */
+    .progress-bar-container {
+        margin: 1rem 0;
+    }
+    
+    .progress-bar-label {
+        font-size: 0.8rem;
+    }
+    
+    .progress-percentage {
+        font-size: 0.95rem;
+    }
+    
+    .progress-bar-track {
+        height: 10px;
+    }
+    
+    /* Weekly legend - stack vertically on small screens */
+    .weekly-legend {
+        flex-wrap: wrap;
+        gap: 12px 16px;
+        padding: 12px;
+        justify-content: flex-start;
+    }
+    
+    .legend-item {
+        font-size: 0.75rem;
+        gap: 6px;
+    }
+    
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+    }
+    
+    /* Streak info - smaller text */
+    .weekly-streak-info {
+        font-size: 0.85rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .streak-badge {
+        font-size: 0.9rem;
+    }
+    
+    .completion-text {
+        font-size: 0.8rem;
+    }
+}
+
+/* Extra small screens - further optimization */
+@media (max-width: 480px) {
+    .weekly-card {
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .weekly-habit-name {
+        font-size: 1rem;
+    }
+    
+    .weekly-habit-schedule {
+        font-size: 0.7rem;
+    }
+    
+    /* Day cells - minimum viable size */
+    .day-cell {
+        min-width: 40px;
+        min-height: 70px;
+        padding: 6px 2px;
+    }
+    
+    .day-label {
+        font-size: 0.6rem;
+    }
+    
+    .day-date {
+        font-size: 0.6rem;
+    }
+    
+    .day-status-icon {
+        font-size: 1.5rem !important;
+    }
+    
+    .weekly-legend {
+        gap: 8px 12px;
+        padding: 10px;
+    }
+    
+    .legend-item {
+        font-size: 0.7rem;
+    }
+    
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+/* Ensure content is not hidden behind mobile browser UI */
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 2rem;
+    }
+    
+    .container {
+        padding-bottom: 2rem;
     }
 }
 
