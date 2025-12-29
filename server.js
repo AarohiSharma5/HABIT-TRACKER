@@ -46,14 +46,15 @@ if (process.env.NODE_ENV === 'production') {
     
     // Security headers
     app.use((req, res, next) => {
-        // Content Security Policy - Updated for Firebase Google Sign-In
+        // Content Security Policy - Updated for all app features
         res.setHeader(
             'Content-Security-Policy',
             "default-src 'self'; " +
-            "script-src 'self' https://www.gstatic.com https://apis.google.com; " +
+            "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net; " +
             "style-src 'self' 'unsafe-inline' https://www.gstatic.com; " +
             "img-src 'self' data: https: https://lh3.googleusercontent.com; " +
             "font-src 'self' data: https://www.gstatic.com; " +
+            "media-src 'self' data:; " +
             "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; " +
             "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; " +
             "object-src 'none'; " +
