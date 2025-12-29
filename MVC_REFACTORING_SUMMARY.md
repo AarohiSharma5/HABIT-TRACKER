@@ -19,7 +19,7 @@ Successfully refactored the Habit Tracker backend from route-based logic to MVC 
 2. `getWeeklyAnalytics()` - Get 7-day completion data for all habits
 3. `getAllHabits()` - Fetch all active habits for the authenticated user
 4. `getHabitById()` - Retrieve a single habit by ID
-5. `createHabit()` - Create new habit with validation (minimumDuration: 1-480 minutes)
+5. `createHabit()` - Create new habit with validation (minimumDuration: 1-1440 minutes)
 6. `updateHabit()` - Modify habit properties
 7. `deleteHabit()` - Remove a habit
 8. `completeHabit()` - Mark as done, update streak, set completedAt timestamp

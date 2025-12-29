@@ -116,7 +116,7 @@ Starts a habit (sets status to in-progress).
 Added optional "Minimum Duration" field to habit creation form:
 - Input type: number
 - Unit: minutes
-- Range: 1-480 minutes (8 hours max)
+- Range: 1-1440 minutes (24 hours max)
 - Located below skip days selection
 
 ### New Utility Functions

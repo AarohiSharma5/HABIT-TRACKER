@@ -145,7 +145,7 @@ habitSchema.index({ category: 1 });
 - ✅ Mongoose schema validation for all models
 - ✅ Password complexity requirements enforced
 - ✅ Email format validation with regex
-- ✅ Habit duration limits (1-480 minutes)
+- ✅ Habit duration limits (1-1440 minutes)
 - ✅ daysPerWeek constraints (1-7)
 
 #### XSS Prevention

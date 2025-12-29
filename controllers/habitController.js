@@ -281,10 +281,10 @@ exports.createHabit = async (req, res) => {
         // Validate minimumDuration if provided
         if (minimumDuration !== null && minimumDuration !== undefined) {
             const duration = parseInt(minimumDuration);
-            if (isNaN(duration) || duration < 1 || duration > 480) {
+            if (isNaN(duration) || duration < 1 || duration > 1440) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Minimum duration must be between 1 and 480 minutes'
+                    message: 'Minimum duration must be between 1 and 1440 minutes'
                 });
             }
         }
