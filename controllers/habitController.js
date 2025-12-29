@@ -72,6 +72,86 @@ exports.getDailyAnalytics = async (req, res) => {
 };
 
 /**
+ * Get yearly data for a specific habit
+ */
+exports.getYearlyData = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { id } = req.params;
+        const { year } = req.query;
+        
+        const habit = await Habit.findOne({ _id: id, userId });
+        
+        if (!habit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Habit not found'
+            });
+        }
+        
+        const targetYear = year ? parseInt(year) : new Date().getFullYear();
+        const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
+        const daysInYear = isLeapYear ? 366 : 365;
+        
+        // Create array for all days in the year
+        const yearData = [];
+        const startDate = new Date(targetYear, 0, 1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (let i = 0; i < daysInYear; i++) {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            currentDate.setHours(0, 0, 0, 0);
+            
+            // Check if this day is in the future
+            const isFuture = currentDate > today;
+            
+            // Find entry in completion history
+            const entry = habit.completionHistory.find(h => {
+                const entryDate = new Date(h.date);
+                entryDate.setHours(0, 0, 0, 0);
+                return entryDate.getTime() === currentDate.getTime();
+            });
+            
+            let status;
+            if (isFuture) {
+                status = 'future';
+            } else if (entry) {
+                status = entry.status; // 'completed' or 'skipped'
+            } else {
+                status = 'missed'; // Past day with no entry
+            }
+            
+            yearData.push({
+                date: currentDate,
+                status: status,
+                dayOfYear: i + 1
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                habitId: habit._id,
+                habitName: habit.name,
+                year: targetYear,
+                isLeapYear,
+                daysInYear,
+                yearData
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching yearly data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch yearly data',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get weekly analytics for all habits
  */
 exports.getWeeklyAnalytics = async (req, res) => {

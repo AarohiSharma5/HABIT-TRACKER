@@ -19,6 +19,7 @@
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-all-habits">📋 All Habits</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-analytics">📈 Analytics</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-weekly-progress">📅 Weekly Progress</a></li>
+        <li class="nav-item"><a href="#" class="nav-link" data-page="page-yearly-view">📆 Yearly View</a></li>
         <li class="nav-item user-menu">
             <span class="user-name"><%= userName %></span>
             <a href="/logout" class="btn-logout">Logout</a>
@@ -316,6 +317,57 @@
         <section class="weekly-analysis-section">
             <div id="weekly-progress-container">
                 <p class="loading-text">Loading weekly progress...</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- PAGE 4.5: Yearly View -->
+    <div id="page-yearly-view" class="page">
+        <header>
+            <h1>📆 Yearly Habit Tracker</h1>
+            <p class="subtitle">365-day view of your habits</p>
+        </header>
+
+        <!-- Habit and Year Selection -->
+        <div class="yearly-controls">
+            <div class="form-group">
+                <label for="yearly-habit-select">Select Habit</label>
+                <select id="yearly-habit-select" class="yearly-select">
+                    <option value="">Choose a habit...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yearly-year-select">Select Year</label>
+                <select id="yearly-year-select" class="yearly-select">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Color Legend -->
+        <div class="progress-legend">
+            <div class="legend-item">
+                <span class="legend-dot completed"></span>
+                <span class="legend-label">Completed</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot skipped"></span>
+                <span class="legend-label">Skipped</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot missed"></span>
+                <span class="legend-label">Missed</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot future"></span>
+                <span class="legend-label">Future</span>
+            </div>
+        </div>
+
+        <!-- Yearly Grid -->
+        <section class="yearly-view-section">
+            <div id="yearly-grid-container">
+                <p class="loading-text">Select a habit to view yearly progress...</p>
             </div>
         </section>
     </div>

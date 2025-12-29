@@ -59,6 +59,8 @@ function switchPage(pageId) {
         displayHabits();
     } else if (pageId === 'page-add-habit') {
         updateQuickStats();
+    } else if (pageId === 'page-yearly-view') {
+        loadYearlyView();
     }
 }
 
@@ -2179,6 +2181,225 @@ window.copyToClipboard = function(elementId) {
                 showMessage('Failed to copy to clipboard', 'error');
             });
     }
+}
+
+// ========== Yearly View Functions ==========
+
+/**
+ * Initialize yearly view page
+ */
+async function loadYearlyView() {
+    try {
+        // Populate habits dropdown
+        const habitSelect = document.getElementById('yearly-habit-select');
+        habitSelect.innerHTML = '<option value="">Choose a habit...</option>';
+        
+        habits.forEach(habit => {
+            const option = document.createElement('option');
+            option.value = habit._id;
+            option.textContent = habit.name;
+            habitSelect.appendChild(option);
+        });
+        
+        // Populate years dropdown (last 5 years to current year)
+        const yearSelect = document.getElementById('yearly-year-select');
+        const currentYear = new Date().getFullYear();
+        yearSelect.innerHTML = '';
+        
+        for (let year = currentYear; year >= currentYear - 4; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) option.selected = true;
+            yearSelect.appendChild(option);
+        }
+        
+        // Setup event listeners
+        habitSelect.addEventListener('change', fetchYearlyData);
+        yearSelect.addEventListener('change', fetchYearlyData);
+        
+    } catch (error) {
+        console.error('Error loading yearly view:', error);
+    }
+}
+
+/**
+ * Fetch and display yearly data for selected habit and year
+ */
+async function fetchYearlyData() {
+    const habitSelect = document.getElementById('yearly-habit-select');
+    const yearSelect = document.getElementById('yearly-year-select');
+    const container = document.getElementById('yearly-grid-container');
+    
+    const habitId = habitSelect.value;
+    const year = yearSelect.value;
+    
+    if (!habitId) {
+        container.innerHTML = '<p class="loading-text">Select a habit to view yearly progress...</p>';
+        return;
+    }
+    
+    try {
+        container.innerHTML = '<p class="loading-text">Loading yearly data...</p>';
+        
+        const response = await fetch(`${API_URL}/${habitId}/yearly?year=${year}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderYearlyGrid(data.data);
+        } else {
+            container.innerHTML = `<p class="error-text">${data.message}</p>`;
+        }
+    } catch (error) {
+        console.error('Error fetching yearly data:', error);
+        container.innerHTML = '<p class="error-text">Failed to load yearly data</p>';
+    }
+}
+
+/**
+ * Render 365-day yearly grid
+ */
+function renderYearlyGrid(data) {
+    const container = document.getElementById('yearly-grid-container');
+    const { habitName, year, isLeapYear, yearData } = data;
+    
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'yearly-header';
+    header.innerHTML = `
+        <h3>${habitName}</h3>
+        <p>${year} ${isLeapYear ? '(Leap Year - 366 days)' : '(365 days)'}</p>
+    `;
+    
+    // Create months container
+    const monthsContainer = document.createElement('div');
+    monthsContainer.className = 'yearly-months-grid';
+    
+    // Group days by month
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    let currentMonth = 0;
+    let monthDays = [];
+    
+    yearData.forEach((day, index) => {
+        const date = new Date(day.date);
+        const month = date.getMonth();
+        
+        if (month !== currentMonth && monthDays.length > 0) {
+            // Render previous month
+            monthsContainer.appendChild(createMonthBlock(monthNames[currentMonth], monthDays));
+            monthDays = [];
+            currentMonth = month;
+        }
+        
+        monthDays.push(day);
+        
+        // Handle last day
+        if (index === yearData.length - 1) {
+            monthsContainer.appendChild(createMonthBlock(monthNames[currentMonth], monthDays));
+        }
+    });
+    
+    // Statistics
+    const stats = calculateYearlyStats(yearData);
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'yearly-stats';
+    statsDiv.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-value">${stats.completed}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.skipped}</div>
+            <div class="stat-label">Skipped</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.missed}</div>
+            <div class="stat-label">Missed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.completionRate}%</div>
+            <div class="stat-label">Completion Rate</div>
+        </div>
+    `;
+    
+    // Clear and populate container
+    container.innerHTML = '';
+    container.appendChild(header);
+    container.appendChild(statsDiv);
+    container.appendChild(monthsContainer);
+}
+
+/**
+ * Create a month block with days grid
+ */
+function createMonthBlock(monthName, days) {
+    const monthDiv = document.createElement('div');
+    monthDiv.className = 'month-block';
+    
+    const monthHeader = document.createElement('div');
+    monthHeader.className = 'month-name';
+    monthHeader.textContent = monthName;
+    
+    const daysGrid = document.createElement('div');
+    daysGrid.className = 'days-grid';
+    
+    days.forEach(day => {
+        const dayCell = document.createElement('div');
+        dayCell.className = `day-cell ${day.status}`;
+        dayCell.title = formatDateForTooltip(day.date, day.status);
+        
+        const date = new Date(day.date);
+        dayCell.textContent = date.getDate();
+        
+        daysGrid.appendChild(dayCell);
+    });
+    
+    monthDiv.appendChild(monthHeader);
+    monthDiv.appendChild(daysGrid);
+    
+    return monthDiv;
+}
+
+/**
+ * Calculate yearly statistics
+ */
+function calculateYearlyStats(yearData) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Only count non-future days
+    const pastDays = yearData.filter(d => new Date(d.date) <= today);
+    
+    const completed = pastDays.filter(d => d.status === 'completed').length;
+    const skipped = pastDays.filter(d => d.status === 'skipped').length;
+    const missed = pastDays.filter(d => d.status === 'missed').length;
+    
+    const totalPastDays = pastDays.length;
+    const completionRate = totalPastDays > 0 
+        ? Math.round(((completed + skipped) / totalPastDays) * 100) 
+        : 0;
+    
+    return { completed, skipped, missed, completionRate };
+}
+
+/**
+ * Format date for tooltip
+ */
+function formatDateForTooltip(dateStr, status) {
+    const date = new Date(dateStr);
+    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    const formatted = date.toLocaleDateString('en-US', options);
+    
+    const statusText = {
+        'completed': 'Completed ✓',
+        'skipped': 'Skipped',
+        'missed': 'Missed',
+        'future': 'Future date'
+    };
+    
+    return `${formatted} - ${statusText[status] || status}`;
 }
 
 // Make functions global

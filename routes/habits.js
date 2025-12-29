@@ -23,6 +23,12 @@ router.get('/analytics/daily', habitController.getDailyAnalytics);
 router.get('/analytics/weekly', habitController.getWeeklyAnalytics);
 
 /**
+ * GET /api/habits/:id/yearly
+ * Get yearly data for a specific habit
+ */
+router.get('/:id/yearly', habitController.getYearlyData);
+
+/**
  * GET /api/habits
  * Get all active habits
  */
