@@ -25,6 +25,67 @@ try {
 // ========== Page Navigation Functions ==========
 
 /**
+ * Setup mobile hamburger menu functionality
+ */
+function setupMobileMenu() {
+    const hamburger = document.getElementById('hamburger-btn');
+    const navMenu = document.getElementById('nav-menu');
+    const overlay = document.getElementById('mobile-overlay');
+    
+    if (!hamburger || !navMenu || !overlay) return;
+    
+    // Toggle menu on hamburger click
+    hamburger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMobileMenu();
+    });
+    
+    // Close menu when clicking overlay
+    overlay.addEventListener('click', closeMobileMenu);
+    
+    // Close menu on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeMobileMenu();
+        }
+    });
+}
+
+/**
+ * Toggle mobile menu open/close
+ */
+function toggleMobileMenu() {
+    const hamburger = document.getElementById('hamburger-btn');
+    const navMenu = document.getElementById('nav-menu');
+    const overlay = document.getElementById('mobile-overlay');
+    
+    const isOpen = navMenu.classList.contains('active');
+    
+    if (isOpen) {
+        closeMobileMenu();
+    } else {
+        hamburger.classList.add('active');
+        navMenu.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+    }
+}
+
+/**
+ * Close mobile menu
+ */
+function closeMobileMenu() {
+    const hamburger = document.getElementById('hamburger-btn');
+    const navMenu = document.getElementById('nav-menu');
+    const overlay = document.getElementById('mobile-overlay');
+    
+    if (hamburger) hamburger.classList.remove('active');
+    if (navMenu) navMenu.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = ''; // Restore scroll
+}
+
+/**
  * Switch between different pages
  */
 function switchPage(pageId) {
@@ -83,8 +144,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const pageId = link.dataset.page;
             switchPage(pageId);
+            
+            // Close mobile menu when a link is clicked
+            closeMobileMenu();
         });
     });
+    
+    // Setup mobile hamburger menu
+    setupMobileMenu();
     
     // Setup form submission
     const habitForm = document.getElementById('habit-form');

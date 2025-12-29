@@ -7,6 +7,13 @@
 <!-- Navigation Bar -->
 <nav class="navbar">
     <div class="nav-brand">
+        <!-- Hamburger Menu Button (Mobile Only) -->
+        <button class="hamburger-menu" id="hamburger-btn" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
         <div class="profile-icon-container" onclick="switchPage('page-profile')">
             <div class="profile-icon" id="nav-profile-icon">
                 <span class="profile-icon-text"></span>
@@ -14,7 +21,12 @@
         </div>
         <h1>📊 Habit Tracker</h1>
     </div>
-    <ul class="nav-menu">
+    
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobile-overlay"></div>
+    
+    <!-- Navigation Menu (Desktop permanent, Mobile drawer) -->
+    <ul class="nav-menu" id="nav-menu">
         <li class="nav-item"><a href="#" class="nav-link active" data-page="page-add-habit">➕ Add Habit</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-all-habits">📋 All Habits</a></li>
         <li class="nav-item"><a href="#" class="nav-link" data-page="page-analytics">📈 Analytics</a></li>
