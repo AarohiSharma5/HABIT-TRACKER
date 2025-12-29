@@ -21,6 +21,7 @@ const { initializeFirebase } = require('./config/firebase');
 // Import routes
 const habitRoutes = require('./routes/habits');
 const authRoutes = require('./routes/auth');
+const routineRoutes = require('./routes/routines');
 const { requireAuth, redirectIfAuthenticated } = require('./middleware/auth');
 
 // Initialize Express app
@@ -55,7 +56,7 @@ if (process.env.NODE_ENV === 'production') {
             "img-src 'self' data: https: https://lh3.googleusercontent.com; " +
             "font-src 'self' data: https://www.gstatic.com; " +
             "media-src 'self' data:; " +
-            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; " +
+            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://generativelanguage.googleapis.com; " +
             "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; " +
             "object-src 'none'; " +
             "base-uri 'self';"
@@ -163,6 +164,9 @@ app.get('/', requireAuth, (req, res) => {
 
 // Habit API routes (protected)
 app.use('/api/habits', requireAuth, habitRoutes);
+
+// Routine API routes (protected)
+app.use('/api/routines', requireAuth, routineRoutes);
 
 // ========== Error Handling ==========
 

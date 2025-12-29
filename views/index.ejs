@@ -613,4 +613,48 @@
     </div>
 </div>
 
+<!-- AI Routine Modal -->
+<div id="routine-modal" class="modal">
+    <div class="modal-content routine-modal-content">
+        <button class="modal-close" onclick="closeRoutineModal()">&times;</button>
+        <h2 id="routine-modal-title">Personal Routine</h2>
+        <p class="modal-subtitle" id="routine-modal-subtitle">Let's create a personalized routine to help you succeed!</p>
+        
+        <div id="routine-request-view">
+            <form id="routine-request-form">
+                <div class="form-group">
+                    <label for="routine-prompt-input">What would you like help with?</label>
+                    <textarea 
+                        id="routine-prompt-input" 
+                        rows="4"
+                        placeholder="Ask how you want to approach this habit (e.g., 'Give me a morning routine', 'What's a good weekly plan?', 'Tips for staying consistent')"
+                        required
+                    ></textarea>
+                    <small class="form-help">Be specific to get the best personalized advice!</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeRoutineModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <span class="btn-text">Generate Routine</span>
+                        <span class="btn-loader" style="display: none;">⏳ Generating...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div id="routine-display-view" style="display: none;">
+            <div class="routine-content">
+                <div id="routine-text-display"></div>
+            </div>
+            
+            <div class="routine-actions">
+                <button type="button" class="btn-secondary" onclick="regenerateRoutine()">🔄 Regenerate</button>
+                <button type="button" class="btn-danger-outline" onclick="deleteRoutine()">🗑️ Delete</button>
+                <button type="button" class="btn-primary" onclick="closeRoutineModal()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <%- include('partials/footer') %>

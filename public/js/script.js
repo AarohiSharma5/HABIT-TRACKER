@@ -924,7 +924,10 @@ function createHabitElement(habit) {
                         <button class="btn-undo" onclick="undoSkipToday('${habit._id}')">Undo Skip</button>
                     ` : ''}
                 </div>
-                <button class="btn-delete-minimal" onclick="deleteHabit('${habit._id}')" title="Delete habit">×</button>
+                <div class="habit-card-actions-secondary">
+                    <button class="btn-routine" onclick="openRoutineModal('${habit._id}', '${habit.name}', '${habit.category || 'general'}')" title="Get AI routine">💡 Routine</button>
+                    <button class="btn-delete-minimal" onclick="deleteHabit('${habit._id}')" title="Delete habit">×</button>
+                </div>
             </div>
         </div>
     `;
