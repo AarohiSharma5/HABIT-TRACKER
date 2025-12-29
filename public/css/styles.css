@@ -131,8 +131,6 @@ body {
 .navbar .nav-brand:hover::before {
     left: 100%;
 }
-    transition: background var(--transition-base);
-}
 
 .profile-icon-container {
     cursor: pointer;
@@ -335,7 +333,8 @@ header {
     text-align: center;
     margin-bottom: 3rem;
     padding-bottom: 2rem;
-    position: relative;\n}
+    position: relative;
+}
 
 header::after {
     content: '';
@@ -375,7 +374,10 @@ header h1 {
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: var(--shadow-xl);
     transition: all var(--transition-base);
-    position: relative;- CALM DESIGN ========== */
+    position: relative;
+}
+
+/* ========== ADD HABIT SECTION - CALM DESIGN ========== */
 .add-habit-section {
     margin-bottom: 3rem;
     background: var(--card-bg);
@@ -390,11 +392,7 @@ header h1 {
 .add-habit-section:hover {
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
-    border-color: #D1D5DB
-    font-weight: 600;
-    font-size: 0.9375rem;
-    letter-spacing: 0.025em;
-    transition: color var(--transition-base);
+    border-color: #D1D5DB;
 }
 
 .form-group:focus-within label {
@@ -873,17 +871,6 @@ button:active,
 }
 
 /* ========== Analytics Section ========== */
-    border: none;
-    border-radius: 12px;
-    font-size: 1.05rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    letter-spacing: 0.3px;
-    position: relative;
-    overflow: hidden;
-}
 
 button::before,
 .btn-primary::before {
@@ -2239,20 +2226,6 @@ button:active,
     transform: translateY(-5px) scale(1.05);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
-    align-items: center;
-    justify-content: center;
-    padding: 12px 8px;
-    border-radius: 8px;
-    background-color: #f8fafc;
-    border: 2px solid #e2e8f0;
-    transition: all 0.2s ease;
-    min-height: 80px;
-}
-
-.day-item:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
 
 .day-name {
     font-size: 0.75rem;
@@ -3499,6 +3472,7 @@ footer {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
     opacity: 0;
     animation: badgePulse 2s ease-in-out infinite;
