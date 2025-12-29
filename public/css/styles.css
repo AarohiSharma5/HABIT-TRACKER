@@ -117,6 +117,18 @@ body {
     overflow: hidden;
 }
 
+/* Mobile navbar improvements */
+@media (max-width: 768px) {
+    .navbar .nav-brand {
+        padding: 1rem 1.5rem;
+        gap: 0.75rem;
+    }
+    
+    .navbar .nav-brand h1 {
+        font-size: 1.5rem !important;
+    }
+}
+
 .navbar .nav-brand::before {
     content: '';
     position: absolute;
@@ -172,6 +184,19 @@ body {
     overflow: hidden;
 }
 
+/* Mobile profile icon */
+@media (max-width: 768px) {
+    .profile-icon {
+        width: 45px;
+        height: 45px;
+        border: 2px solid rgba(255, 255, 255, 0.9);
+    }
+    
+    .profile-icon-text {
+        font-size: 1.1rem !important;
+    }
+}
+
 .profile-icon::before {
     content: '';
     position: absolute;
@@ -224,6 +249,60 @@ body {
 
 .nav-item {
     margin: 0;
+}
+
+/* Mobile navigation improvements */
+@media (max-width: 768px) {
+    .nav-menu {
+        gap: 2px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+        padding: 0 0.5rem;
+        scrollbar-width: none;
+    }
+    
+    .nav-menu::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .nav-link {
+        padding: 14px 16px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        border-bottom-width: 2px;
+    }
+    
+    .user-menu {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+    
+    .user-menu .user-name {
+        font-size: 0.85rem !important;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .btn-logout {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-link {
+        padding: 12px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .user-menu .user-name {
+        display: none;
+    }
 }
 
 .nav-link {
@@ -328,6 +407,21 @@ body {
     z-index: 1;
 }
 
+/* Mobile Container Adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 1.5rem;
+        min-height: calc(100vh - 120px);
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 1rem;
+        min-height: calc(100vh - 100px);
+    }
+}
+
 /* ========== Header Styles ========== */
 header {
     text-align: center;
@@ -364,6 +458,43 @@ header h1 {
     opacity: 0.9;
 }
 
+/* Mobile Header Adjustments */
+@media (max-width: 768px) {
+    header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+        letter-spacing: -1px;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
+    header::after {
+        width: 60px;
+        height: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+    }
+    
+    header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
+    }
+}
+
 /* ========== Form Styles ========== */
 .add-habit-section {
     margin-bottom: 3rem;
@@ -393,6 +524,27 @@ header h1 {
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
     border-color: #D1D5DB;
+}
+
+/* Mobile Form Adjustments */
+@media (max-width: 768px) {
+    .add-habit-section {
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 12px;
+    }
+    
+    .add-habit-section:hover {
+        transform: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .add-habit-section {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 10px;
+    }
 }
 
 .form-group:focus-within label {
@@ -843,6 +995,7 @@ button,
     box-shadow: 0 2px 8px rgba(111, 124, 243, 0.2);
     letter-spacing: 0.3px;
     position: relative;
+    min-height: 44px; /* Touch-friendly */
 }
 
 button:hover,
@@ -856,6 +1009,30 @@ button:active,
 .btn-primary:active {
     transform: translateY(0);
     box-shadow: 0 2px 6px rgba(111, 124, 243, 0.2);
+}
+
+/* Mobile Button Adjustments */
+@media (max-width: 768px) {
+    button,
+    .btn-primary {
+        padding: 14px 24px;
+        font-size: 1rem;
+        min-height: 48px; /* Larger touch target on mobile */
+    }
+    
+    button:hover,
+    .btn-primary:hover {
+        transform: none; /* Disable hover effects on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    button,
+    .btn-primary {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        min-height: 44px;
+    }
 }
 
 #habit-form button[type="submit"],
@@ -1382,6 +1559,74 @@ button:active,
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
     border-color: #e2e8f0;
+}
+
+/* Mobile Habit Card Adjustments */
+@media (max-width: 768px) {
+    .habit-card {
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+    
+    .habit-card:hover {
+        transform: none; /* Disable hover effects on mobile */
+    }
+    
+    .habit-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .habit-card-title {
+        font-size: 1.125rem;
+    }
+    
+    .habit-card-description {
+        font-size: 0.875rem;
+    }
+    
+    .habit-card-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .habit-card-actions-primary {
+        flex-wrap: wrap;
+        justify-content: stretch;
+    }
+    
+    .habit-card-actions-primary button {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .habit-card {
+        padding: 1rem;
+        border-radius: 10px;
+    }
+    
+    .habit-card-title {
+        font-size: 1rem;
+    }
+    
+    .habit-card-description {
+        font-size: 0.8125rem;
+    }
+    
+    .timer-display {
+        font-size: 1.5rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .habit-card-actions-primary button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        min-height: 44px;
+    }
 }
 
 /* Completed state - subtle success indication */
@@ -3206,6 +3451,39 @@ footer {
 .form-group textarea {
     resize: vertical;
     min-height: 100px;
+}
+
+/* Mobile Form Adjustments */
+@media (max-width: 768px) {
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-group label {
+        font-size: 0.875rem;
+        margin-bottom: 6px;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 14px;
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        border-radius: 10px;
+    }
+    
+    .form-group textarea {
+        min-height: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 12px;
+        border-radius: 8px;
+    }
 }
 
 .form-help {
