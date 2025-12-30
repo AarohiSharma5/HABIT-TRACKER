@@ -80,47 +80,118 @@ window.closeRoutineModal = function() {
 function displayRoutine(routine) {
     const displayDiv = document.getElementById('routine-text-display');
     
-    // Format the AI-generated text with proper line breaks and styling
-    const formattedText = routine.aiRoutineText
-        .split('\n')
-        .map(line => {
-            // Convert markdown-style headers
-            if (line.startsWith('##')) {
-                return `<h3 class="routine-heading">${line.replace(/^##\s*/, '')}</h3>`;
-            } else if (line.startsWith('#')) {
-                return `<h2 class="routine-heading">${line.replace(/^#\s*/, '')}</h2>`;
+    // Helper function to convert bold markdown to HTML
+    const convertBoldText = (text) => {
+        return text.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+                   .replace(/\*\*/g, ''); // Remove any remaining **
+    };
+    
+    // Helper function to clean text
+    const cleanText = (text) => {
+        return convertBoldText(text.replace(/[\*#]+$/g, '').trim());
+    };
+    
+    // Clean and format the AI-generated text
+    let formattedText = routine.aiRoutineText
+        // Remove excessive asterisks and dashes at line starts/ends
+        .replace(/^[\*\-]{2,}\s*/gm, '')
+        .replace(/\s[\*\-]{2,}$/gm, '')
+        // Clean up excessive whitespace
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    
+    const lines = formattedText.split('\n');
+    const processedLines = [];
+    let inList = false;
+    let listItems = [];
+    
+    lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        
+        // Skip empty lines
+        if (!trimmed) {
+            // Close any open list
+            if (inList) {
+                processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+                listItems = [];
+                inList = false;
             }
-            // Convert bullet points
-            else if (line.trim().startsWith('*') || line.trim().startsWith('-')) {
-                return `<li class="routine-item">${line.replace(/^[\*\-]\s*/, '')}</li>`;
+            return;
+        }
+        
+        // Main headings (# or ##)
+        if (trimmed.startsWith('##')) {
+            if (inList) {
+                processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+                listItems = [];
+                inList = false;
             }
-            // Convert numbered lists
-            else if (line.trim().match(/^\d+\./)) {
-                return `<li class="routine-item-numbered">${line.replace(/^\d+\.\s*/, '')}</li>`;
+            const text = cleanText(trimmed.replace(/^##\s*/, ''));
+            processedLines.push(`<h3 class="routine-heading routine-heading-sub">${text}</h3>`);
+        }
+        else if (trimmed.startsWith('#')) {
+            if (inList) {
+                processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+                listItems = [];
+                inList = false;
             }
-            // Regular paragraphs
-            else if (line.trim().length > 0) {
-                return `<p class="routine-paragraph">${line}</p>`;
+            const text = cleanText(trimmed.replace(/^#\s*/, ''));
+            processedLines.push(`<h2 class="routine-heading routine-heading-main">${text}</h2>`);
+        }
+        // Bullet points and list items
+        else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
+            const text = cleanText(trimmed.replace(/^[\*\-•]\s*/, ''));
+            if (text) {
+                listItems.push(`<li class="routine-item">${text}</li>`);
+                inList = true;
             }
-            return '';
-        })
-        .join('');
+        }
+        // Numbered lists
+        else if (trimmed.match(/^\d+[\.\)]\s/)) {
+            if (inList && listItems.length > 0) {
+                processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+                listItems = [];
+            }
+            const text = cleanText(trimmed.replace(/^\d+[\.\)]\s*/, ''));
+            listItems.push(`<li class="routine-item-numbered">${text}</li>`);
+            inList = true;
+        }
+        // Regular paragraphs
+        else {
+            if (inList) {
+                processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+                listItems = [];
+                inList = false;
+            }
+            const text = cleanText(trimmed);
+            processedLines.push(`<p class="routine-paragraph">${text}</p>`);
+        }
+    });
+    
+    // Close any remaining list
+    if (inList && listItems.length > 0) {
+        processedLines.push(`<ul class="routine-list">${listItems.join('')}</ul>`);
+    }
     
     displayDiv.innerHTML = `
         <div class="routine-meta">
-            <small class="routine-timestamp">
-                Generated on ${new Date(routine.createdAt).toLocaleDateString('en-US', { 
+            <div class="routine-timestamp">
+                <span class="timestamp-icon">📅</span>
+                <span>${new Date(routine.createdAt).toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric', 
                     year: 'numeric',
                     hour: 'numeric',
                     minute: '2-digit'
-                })}
-            </small>
-            <small class="routine-prompt">Your request: "${routine.userPrompt}"</small>
+                })}</span>
+            </div>
+            <div class="routine-prompt">
+                <span class="prompt-icon">💬</span>
+                <span>${routine.userPrompt}</span>
+            </div>
         </div>
         <div class="routine-text">
-            ${formattedText}
+            ${processedLines.join('')}
         </div>
     `;
 }

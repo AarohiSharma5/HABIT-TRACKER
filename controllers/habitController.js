@@ -351,10 +351,11 @@ exports.createHabit = async (req, res) => {
 
 /**
  * Update a habit
+ * NOTE: Habit name is IMMUTABLE to maintain data integrity
  */
 exports.updateHabit = async (req, res) => {
     try {
-        const { name, description, category } = req.body;
+        const { daysPerWeek, skipDays, minimumDuration, description, category } = req.body;
         
         const habit = await Habit.findOne({ 
             _id: req.params.id, 
@@ -368,9 +369,16 @@ exports.updateHabit = async (req, res) => {
             });
         }
         
-        if (name !== undefined) habit.name = name.trim();
+        // IMPORTANT: Do not allow changing the habit name
+        // Habit name is treated as immutable identifier
+        // If user wants different name, they must create a new habit
+        
+        // Update allowed fields only
         if (description !== undefined) habit.description = description.trim();
         if (category !== undefined) habit.category = category;
+        if (daysPerWeek !== undefined) habit.daysPerWeek = daysPerWeek;
+        if (skipDays !== undefined) habit.skipDays = skipDays;
+        if (minimumDuration !== undefined) habit.minimumDuration = minimumDuration;
         
         await habit.save();
         

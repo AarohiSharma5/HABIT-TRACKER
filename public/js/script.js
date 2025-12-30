@@ -160,6 +160,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         habitForm.addEventListener('submit', addHabit);
     }
     
+    // Setup edit habit form submission
+    const editHabitForm = document.getElementById('edit-habit-form');
+    if (editHabitForm) {
+        editHabitForm.addEventListener('submit', saveEditedHabit);
+    }
+    
     // Setup skip days selection handler
     const skipDaysRadios = document.querySelectorAll('input[name="skip-days"]');
     const specificDaysGroup = document.getElementById('specific-days-group');
@@ -213,6 +219,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 customCategoryGroup.style.display = 'block';
             } else {
                 customCategoryGroup.style.display = 'none';
+            }
+        });
+    }
+    
+    // Setup routine generation checkbox handler
+    const routineCheckbox = document.getElementById('generate-routine-on-create');
+    const routinePromptSection = document.getElementById('routine-prompt-section');
+    
+    if (routineCheckbox && routinePromptSection) {
+        routineCheckbox.addEventListener('change', () => {
+            if (routineCheckbox.checked) {
+                routinePromptSection.style.display = 'block';
+            } else {
+                routinePromptSection.style.display = 'none';
             }
         });
     }
@@ -274,6 +294,8 @@ async function addHabit(e) {
     const skipDaysValue = parseInt(document.querySelector('input[name="skip-days"]:checked').value);
     const minimumDuration = document.getElementById('minimum-duration').value;
     const accountabilityMode = document.getElementById('accountability-mode').checked;
+    const generateRoutine = document.getElementById('generate-routine-on-create').checked;
+    const routinePrompt = document.getElementById('initial-routine-prompt').value.trim();
     
     // Get selected skip days
     const skipDays = [];
@@ -311,6 +333,13 @@ async function addHabit(e) {
         const data = await response.json();
         
         if (data.success) {
+            const newHabit = data.habit;
+            
+            // Generate routine if requested
+            if (generateRoutine) {
+                await generateRoutineForNewHabit(newHabit._id, newHabit.name, finalCategory, routinePrompt);
+            }
+            
             await loadHabits();
             updateQuickStats();
             displayHabits();
@@ -321,11 +350,46 @@ async function addHabit(e) {
             }
             
             document.getElementById('habit-form').reset();
-            showMessage('Habit added successfully! 🎉', 'success');
+            
+            // Reset routine prompt section
+            document.getElementById('routine-prompt-section').style.display = 'none';
+            
+            const successMsg = generateRoutine 
+                ? 'Habit created and routine generated! 🎉' 
+                : 'Habit added successfully! 🎉';
+            showMessage(successMsg, 'success');
         }
     } catch (error) {
         console.error('Error adding habit:', error);
         alert('Failed to add habit');
+    }
+}
+
+/**
+ * Generate routine for a newly created habit
+ */
+async function generateRoutineForNewHabit(habitId, habitName, habitCategory, userPrompt) {
+    try {
+        const defaultPrompt = userPrompt || `Give me a practical routine and tips for building the habit: ${habitName}`;
+        
+        const response = await fetch('/api/routines/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                habitId,
+                habitName,
+                habitCategory: habitCategory || 'general',
+                userPrompt: defaultPrompt
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('Failed to generate routine:', data.message);
+        }
+    } catch (error) {
+        console.error('Error generating routine for new habit:', error);
     }
 }
 
@@ -734,6 +798,170 @@ window.deleteHabit = async function(habitId) {
 }
 
 /**
+ * Open edit habit modal
+ */
+window.openEditHabitModal = function(habitId) {
+    const habit = habits.find(h => h._id === habitId);
+    if (!habit) {
+        showMessage('Habit not found', 'error');
+        return;
+    }
+    
+    // Populate form fields
+    document.getElementById('edit-habit-id').value = habit._id;
+    document.getElementById('edit-habit-name-display').value = habit.name;
+    
+    // Set skip days radio
+    const skipDaysValue = 7 - (habit.daysPerWeek || 7);
+    const skipDaysRadio = document.querySelector(`input[name=\"edit-skip-days\"][value=\"${skipDaysValue}\"]`);
+    if (skipDaysRadio) skipDaysRadio.checked = true;
+    
+    // Handle specific skip days
+    const editSpecificDaysGroup = document.getElementById('edit-specific-days-group');
+    const editDayCheckboxes = document.querySelectorAll('input[name=\"edit-skip-specific-days\"]');
+    
+    // Clear all checkboxes first
+    editDayCheckboxes.forEach(cb => cb.checked = false);
+    
+    if (skipDaysValue > 0) {
+        editSpecificDaysGroup.style.display = 'block';
+        // Check the specific days
+        if (habit.skipDays && Array.isArray(habit.skipDays)) {
+            habit.skipDays.forEach(day => {
+                const checkbox = document.querySelector(`input[name=\"edit-skip-specific-days\"][value=\"${day}\"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    } else {
+        editSpecificDaysGroup.style.display = 'none';
+    }
+    
+    // Set minimum duration
+    document.getElementById('edit-minimum-duration').value = habit.minimumDuration || '';
+    
+    // Show modal
+    document.getElementById('edit-habit-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Setup edit skip days change handlers
+    setupEditSkipDaysHandlers();
+}
+
+/**
+ * Close edit habit modal
+ */
+window.closeEditHabitModal = function() {
+    document.getElementById('edit-habit-modal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+    document.getElementById('edit-habit-form').reset();
+}
+
+/**
+ * Setup edit modal skip days handlers
+ */
+function setupEditSkipDaysHandlers() {
+    const editSkipDaysRadios = document.querySelectorAll('input[name=\"edit-skip-days\"]');
+    const editSpecificDaysGroup = document.getElementById('edit-specific-days-group');
+    const editDayCheckboxes = document.querySelectorAll('input[name=\"edit-skip-specific-days\"]');
+    const editSkipDaysHelp = document.getElementById('edit-skip-days-help');
+    
+    // Remove existing listeners by cloning nodes
+    editSkipDaysRadios.forEach(radio => {
+        const newRadio = radio.cloneNode(true);
+        radio.parentNode.replaceChild(newRadio, radio);
+    });
+    
+    editDayCheckboxes.forEach(checkbox => {
+        const newCheckbox = checkbox.cloneNode(true);
+        checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+    });
+    
+    // Get fresh references
+    const freshRadios = document.querySelectorAll('input[name=\"edit-skip-days\"]');
+    const freshCheckboxes = document.querySelectorAll('input[name=\"edit-skip-specific-days\"]');
+    
+    // Add radio change listeners
+    freshRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const skipCount = parseInt(e.target.value);
+            if (skipCount > 0) {
+                editSpecificDaysGroup.style.display = 'block';
+                editSkipDaysHelp.textContent = `Select exactly ${skipCount} day${skipCount > 1 ? 's' : ''} to skip`;
+            } else {
+                editSpecificDaysGroup.style.display = 'none';
+                freshCheckboxes.forEach(cb => cb.checked = false);
+            }
+        });
+    });
+    
+    // Add checkbox change listeners
+    freshCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const selectedRadio = document.querySelector('input[name=\"edit-skip-days\"]:checked');
+            if (!selectedRadio) return;
+            
+            const maxSkipDays = parseInt(selectedRadio.value);
+            const checkedBoxes = document.querySelectorAll('input[name=\"edit-skip-specific-days\"]:checked');
+            
+            if (checkedBoxes.length > maxSkipDays) {
+                checkbox.checked = false;
+                showMessage(`You can only select ${maxSkipDays} day${maxSkipDays > 1 ? 's' : ''} to skip`, 'info');
+            }
+        });
+    });
+}
+
+/**
+ * Save edited habit
+ */
+async function saveEditedHabit(e) {
+    e.preventDefault();
+    
+    const habitId = document.getElementById('edit-habit-id').value;
+    const skipDaysValue = parseInt(document.querySelector('input[name=\"edit-skip-days\"]:checked').value);
+    const minimumDuration = document.getElementById('edit-minimum-duration').value;
+    
+    // Get selected skip days
+    const skipDays = [];
+    const skipDaysCheckboxes = document.querySelectorAll('input[name=\"edit-skip-specific-days\"]:checked');
+    skipDaysCheckboxes.forEach(checkbox => skipDays.push(checkbox.value));
+    
+    // Validate skip days selection
+    if (skipDaysValue > 0 && skipDays.length !== skipDaysValue) {
+        showMessage(`Please select exactly ${skipDaysValue} day${skipDaysValue > 1 ? 's' : ''} to skip`, 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/${habitId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                daysPerWeek: 7 - skipDaysValue,
+                skipDays,
+                minimumDuration: minimumDuration ? parseInt(minimumDuration) : null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update local habits array
+            await loadHabits();
+            displayHabits();
+            
+            closeEditHabitModal();
+            showMessage('Habit updated successfully! 🎉', 'success');
+        } else {
+            showMessage(data.message || 'Failed to update habit', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating habit:', error);
+        showMessage('Failed to update habit', 'error');
+    }
+}
+
+/**
  * Skip habit for today
  * Marks today as skipped without breaking streak
  */
@@ -926,6 +1154,7 @@ function createHabitElement(habit) {
                 </div>
                 <div class="habit-card-actions-secondary">
                     <button class="btn-routine" onclick="openRoutineModal('${habit._id}', '${habit.name}', '${habit.category || 'general'}')" title="Get AI routine">💡 Routine</button>
+                    <button class="btn-edit-minimal" onclick="openEditHabitModal('${habit._id}')" title="Edit habit">✏️</button>
                     <button class="btn-delete-minimal" onclick="deleteHabit('${habit._id}')" title="Delete habit">×</button>
                 </div>
             </div>

@@ -205,6 +205,26 @@
                     </label>
                     <small class="form-help">When enabled, you'll be required to provide extra proof (image or detailed note) before completing this habit. This helps maintain higher accountability.</small>
                 </div>
+                
+                <!-- Routine Generation Option -->
+                <div class="form-group routine-generation-option">
+                    <label class="checkbox-label routine-checkbox-label">
+                        <input type="checkbox" id="generate-routine-on-create" name="generateRoutine">
+                        <span class="routine-label-text">💡 Generate AI Routine for this habit</span>
+                    </label>
+                    <small class="form-help">Get personalized tips and a routine plan powered by AI to help you succeed with this habit</small>
+                    
+                    <div id="routine-prompt-section" class="routine-prompt-section" style="display: none;">
+                        <label for="initial-routine-prompt">What would you like help with? (Optional)</label>
+                        <textarea 
+                            id="initial-routine-prompt" 
+                            rows="3"
+                            placeholder="e.g., 'Give me a morning routine', 'How can I stay consistent?', 'Tips for beginners'"
+                        ></textarea>
+                        <small class="form-help">Leave blank for a general routine, or be specific for personalized advice</small>
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn-primary">Create Habit</button>
             </form>
         </section>
@@ -610,6 +630,147 @@
             <button type="button" class="btn-secondary" onclick="skipHonestyCheck()">Skip for now</button>
             <button type="button" class="btn-primary" onclick="submitHonestyReview()">Submit Review</button>
         </div>
+    </div>
+</div>
+
+<!-- Edit Habit Modal -->
+<div id="edit-habit-modal" class="modal">
+    <div class="modal-content edit-modal-content">
+        <button class="modal-close" onclick="closeEditHabitModal()">&times;</button>
+        <h2 id="edit-habit-modal-title">Edit Habit Settings</h2>
+        <p class="modal-subtitle">
+            <strong>Note:</strong> Habit name cannot be changed. To rename, create a new habit.
+        </p>
+        
+        <form id="edit-habit-form">
+            <input type="hidden" id="edit-habit-id">
+            
+            <!-- Display habit name (read-only) -->
+            <div class="form-group">
+                <label>Habit Name (Cannot be changed)</label>
+                <input 
+                    type="text" 
+                    id="edit-habit-name-display" 
+                    readonly 
+                    class="readonly-input"
+                >
+                <small class="form-help">Habit name is immutable to maintain data integrity</small>
+            </div>
+            
+            <!-- Skip Days per Week -->
+            <div class="form-group">
+                <label>How many days would you like to skip per week?</label>
+                <div class="skip-days-table">
+                    <label class="skip-option">
+                        <input type="radio" name="edit-skip-days" value="0">
+                        <div class="skip-option-content">
+                            <div class="skip-icon">🔥</div>
+                            <div class="skip-label">No Skip Days</div>
+                            <div class="skip-description">7 days active</div>
+                        </div>
+                    </label>
+                    <label class="skip-option">
+                        <input type="radio" name="edit-skip-days" value="1">
+                        <div class="skip-option-content">
+                            <div class="skip-icon">💪</div>
+                            <div class="skip-label">1 Skip Day</div>
+                            <div class="skip-description">6 days active</div>
+                        </div>
+                    </label>
+                    <label class="skip-option">
+                        <input type="radio" name="edit-skip-days" value="2">
+                        <div class="skip-option-content">
+                            <div class="skip-icon">⭐</div>
+                            <div class="skip-label">2 Skip Days</div>
+                            <div class="skip-description">5 days active</div>
+                        </div>
+                    </label>
+                    <label class="skip-option">
+                        <input type="radio" name="edit-skip-days" value="3">
+                        <div class="skip-option-content">
+                            <div class="skip-icon">🎯</div>
+                            <div class="skip-label">3 Skip Days</div>
+                            <div class="skip-description">4 days active</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Specific Skip Days -->
+            <div class="form-group" id="edit-specific-days-group" style="display: none;">
+                <label>Which specific days would you like to skip?</label>
+                <small class="form-help" id="edit-skip-days-help">Select the days you want to take as rest days</small>
+                <div class="days-checkbox-table">
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="monday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Monday</div>
+                            <div class="day-icon">📅</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="tuesday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Tuesday</div>
+                            <div class="day-icon">📅</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="wednesday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Wednesday</div>
+                            <div class="day-icon">📅</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="thursday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Thursday</div>
+                            <div class="day-icon">📅</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="friday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Friday</div>
+                            <div class="day-icon">📅</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="saturday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Saturday</div>
+                            <div class="day-icon">🏖️</div>
+                        </div>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="edit-skip-specific-days" value="sunday">
+                        <div class="day-checkbox-content">
+                            <div class="day-name">Sunday</div>
+                            <div class="day-icon">☀️</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Minimum Duration -->
+            <div class="form-group">
+                <label for="edit-minimum-duration">Minimum Duration (Optional)</label>
+                <small class="form-help">Set a minimum time requirement in minutes</small>
+                <input 
+                    type="number" 
+                    id="edit-minimum-duration" 
+                    placeholder="e.g., 30 (minutes)"
+                    min="1"
+                    max="1440"
+                >
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeEditHabitModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 
