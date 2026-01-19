@@ -273,6 +273,7 @@ A: No! Editing settings doesn't affect your completion history or streak.
 **Q: Can I edit multiple habits at once?**
 A: Not yet - edit one at a time for now.
 
+
 **Q: What if I accidentally save wrong settings?**
 A: Just edit again and fix it. No limit on edits.
 
